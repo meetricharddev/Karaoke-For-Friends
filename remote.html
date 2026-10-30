@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7b2ff7">
+<title>手機點歌</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:#14101f;color:#f1ecff;padding-bottom:40px}
+header{background:linear-gradient(90deg,#7b2ff7,#f107a3);padding:14px 16px;font-size:20px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+#status{font-size:13px;font-weight:400;background:#0004;padding:3px 10px;border-radius:12px}
+.wrap{padding:12px}
+.card{background:#211a33;border-radius:12px;padding:12px;margin-bottom:12px}
+h2{margin:0 0 8px;font-size:15px;color:#d6b8ff}
+input{width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid #4a3d6e;background:#150f24;color:#fff}
+button{border:0;border-radius:8px;background:#7b2ff7;color:#fff;padding:10px 14px;font-size:15px}
+button:disabled{background:#3a2f57;color:#a99bc9}
+.row{display:flex;gap:8px}
+ul{list-style:none;margin:0;padding:0}
+li{padding:8px 0;border-bottom:1px solid #342a50;font-size:14px}
+li.me{color:#ffc933}
+.res{display:flex;gap:10px;align-items:center}
+.res img{width:88px;height:50px;object-fit:cover;border-radius:4px;flex:none}
+.res .t{flex:1;min-width:0;font-size:13px;line-height:1.35}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;margin-right:6px}
+.b1{background:#f107a3}.b2{background:#2f7bf7}.b3{background:#555}
+small{color:#a99bc9}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px}
+.chip{flex:none;background:#3a2f57;padding:7px 12px;font-size:14px;border-radius:16px}
+.chip.on{background:#7b2ff7}
+#exres .chip{display:inline-block;margin:0 6px 8px 0}
+#err{display:none;background:#8a1f3a;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:14px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000d;padding:10px 18px;border-radius:20px;display:none}
+</style></head><body>
+<header><span>🎤 手機點歌</span><span id="status">🔴 連線中…</span></header>
+<div class="wrap">
+  <div id="err"></div>
+  <div class="card">
+    <h2>你的名字</h2>
+    <input id="name" placeholder="輸入名字（用來輪流排隊）" maxlength="12">
+  </div>
+  <div class="card">
+    <h2 id="now">連線中…</h2>
+    <small id="hint"></small>
+    <small id="qhead" style="display:block;margin-top:6px"></small>
+    <ul id="qlist"></ul>
+  </div>
+  <div class="card">
+    <h2>🎼 探索點歌</h2>
+    <div class="chips" id="regs"></div>
+    <div class="chips" id="cats"></div>
+    <small id="exNote"></small>
+    <div style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)" style="background:#150f24;color:#fff;border:1px solid #4a3d6e;border-radius:8px;padding:6px"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
+    <ul id="exres"></ul>
+  </div>
+  <div class="card">
+    <h2>搜尋歌曲</h2>
+    <div class="row">
+      <input id="q" type="search" enterkeyhint="search" placeholder="歌名或歌手">
+      <button id="go" onclick="search()" style="flex:none">搜尋</button>
+    </div>
+    <small>🎤 伴奏MV → 📝 歌詞版 → 其他（只列 10 萬次觀看以上）</small>
+    <div style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)" style="background:#150f24;color:#fff;border:1px solid #4a3d6e;border-radius:8px;padding:6px"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
+    <ul id="res"></ul>
+  </div>
+  <div class="card">
+    <h2>貼上 YouTube 連結點歌</h2>
+    <div class="row">
+      <input id="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…">
+      <button id="goUrl" onclick="addUrl()" style="flex:none">加入</button>
+    </div>
+  </div>
+</div>
+<div style="padding:4px 16px 28px;font-size:12px;color:#a99bc9;line-height:1.7"><a href="privacy.html" style="color:#d6b8ff">隱私權政策</a> ・ <a href="terms.html" style="color:#d6b8ff">服務條款</a><br>本程式使用 YouTube API 服務，適用 <a href="https://www.youtube.com/t/terms" style="color:#d6b8ff">YouTube 服務條款</a> 與 <a href="https://policies.google.com/privacy" style="color:#d6b8ff">Google 隱私權政策</a>。</div>
+<div id="toast"></div>
+<script>
+const HOST = location.hash.slice(1);
+const ICE = {iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}]};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BADGE = {1:['🎤 伴奏MV','b1'],2:['📝 歌詞版','b2'],3:['其他','b3']};
+let sortMode = localStorage.getItem('rsort') === 'new' ? 'new' : 'views', lastSearch = null;
+const fmtViews = n => n>=1e8 ? (n/1e8).toFixed(1)+'億' : n>=1e4 ? Math.round(n/1e4)+'萬' : String(n||0);
+const metaOf = v => v.views ? ' · 👁 '+fmtViews(v.views)+' 次 · '+String(v.published||'').slice(0,10) : '';
+function setSort(v){
+  sortMode = v==='new' ? 'new' : 'views'; localStorage.setItem('rsort',sortMode);
+  document.querySelectorAll('.sortSel').forEach(x=>x.value = sortMode);
+  if(lastSearch){ $('q').value = lastSearch.q; search(lastSearch.light); }
+  if(typeof exLoad==='function' && exDone) exLoad();
+}
+let peer = null, conn = null, connected = false, retry = null, rid = 0, R = [];
+const pending = new Map();
+let lastState = null;
+
+$('name').value = localStorage.getItem('rname') || '';
+$('name').addEventListener('input',()=>{ localStorage.setItem('rname',$('name').value.trim()); renderState(lastState); });
+$('q').addEventListener('keydown',e=>{ if(e.key==='Enter') search(); });
+$('url').addEventListener('keydown',e=>{ if(e.key==='Enter') addUrl(); });
+
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.x);toast.x=setTimeout(()=>t.style.display='none',2500)}
+function err(m){const e=$('err');e.textContent=m;e.style.display=m?'block':'none'}
+function status(ok,t){ $('status').textContent = t; }
+
+/* ---------- 連線 ---------- */
+function connect(){
+  if(!HOST){ status(false,'🔴 無法連線'); err('請用手機相機掃描電腦畫面上的 QR code 來開啟本頁。'); return; }
+  status(false,'🔴 連線中…');
+  try{ peer && peer.destroy() }catch(e){}
+  connected = false;
+  peer = new Peer({config:ICE});
+  peer.on('open',()=>{
+    conn = peer.connect(HOST,{reliable:true});
+    const timer = setTimeout(()=>{ if(!connected) status(false,'🔴 連不上電腦…'); },12000);
+    conn.on('open',()=>{ connected = true; clearTimeout(timer); status(true,'🟢 已連線'); err(''); conn.send({t:'hello'}); if(!exDone){ exDone = true; exLoad(); } });
+    conn.on('data',onData);
+    conn.on('close',lost); conn.on('error',lost);
+  });
+  peer.on('error',e=>{
+    if(e.type==='peer-unavailable') err('找不到電腦端。請確認電腦上的點歌機已開啟，並重新掃描 QR code。');
+    lost();
+  });
+}
+function lost(){
+  connected = false; status(false,'🔴 重新連線中…');
+  if(retry) return;
+  retry = setTimeout(()=>{ retry = null; connect(); },3000);
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && !connected && !retry) connect(); });
+
+function ask(msg,ms){
+  return new Promise((res,rej)=>{
+    if(!connected) return rej(new Error('還沒連上電腦，請稍候再試'));
+    const id = ++rid; msg.rid = id;
+    const t = setTimeout(()=>{ pending.delete(id); rej(new Error('電腦沒有回應，請再試一次')); }, ms||20000);
+    pending.set(id,{res,rej,t});
+    conn.send(msg);
+  });
+}
+function onData(d){
+  if(!d || typeof d!=='object') return;
+  if(d.t==='state'){ renderState(d); return; }
+  const p = d.rid && pending.get(d.rid);
+  if(!p) return;
+  clearTimeout(p.t); pending.delete(d.rid);
+  if(d.t==='err') p.rej(new Error(d.msg||'發生錯誤')); else p.res(d);
+}
+
+/* ---------- 佇列顯示 ---------- */
+function renderState(s){
+  if(!s) return; lastState = s;
+  $('now').textContent = s.current ? '🎵 現在：' + s.current.title + (s.current.singer?'｜🎤 '+s.current.singer:'') : '目前沒有播放中的歌';
+  const q = s.queue || [], me = $('name').value.trim();
+  $('qhead').textContent = '待唱 ' + q.length + ' 首';
+  const mine = q.findIndex(x=>me && x.singer===me);
+  $('hint').textContent = mine>=0 ? '你的下一首排在第 ' + (mine+1) + ' 首' : '';
+  $('qlist').innerHTML = q.map((x,i)=>`<li class="${me&&x.singer===me?'me':''}">${i+1}. ${esc(x.title)}${x.singer?' <small>🎤 '+esc(x.singer)+'</small>':''}</li>`).join('') || '<li><small>佇列是空的，快來點第一首！</small></li>';
+}
+
+/* ---------- 搜尋與點歌 ---------- */
+async function search(light){
+  const q = $('q').value.trim(); if(!q) return;
+  lastSearch = {q,light:!!light};
+  $('go').disabled = true; $('res').innerHTML = '<li><small>搜尋中…</small></li>';
+  try{
+    const d = await ask({t:'search',q,light:!!light,sort:sortMode});
+    R = d.items || [];
+    $('res').innerHTML = R.length ? R.map((v,i)=>`<li class="res">
+      <img src="${esc(v.thumb)}" alt="">
+      <div class="t"><span class="badge ${BADGE[v.rank][1]}">${BADGE[v.rank][0]}</span>${esc(v.title)}<br><small>${esc(v.channel)}${metaOf(v)}</small></div>
+      <button id="b${i}" onclick="add(${i})">點歌</button></li>`).join('') : '<li><small>找不到結果</small></li>';
+    err('');
+  }catch(e){ $('res').innerHTML = ''; err(e.message); }
+  $('go').disabled = false;
+}
+async function add(i){
+  const name = $('name').value.trim();
+  if(!name){ toast('請先輸入你的名字'); $('name').focus(); return; }
+  const v = R[i], b = $('b'+i); b.disabled = true;
+  try{
+    await ask({t:'add',id:v.id,title:v.title,channel:v.channel,singer:name});
+    b.textContent = '已點 ✓'; toast('已加入，請看電腦螢幕'); err('');
+    setTimeout(()=>{ b.disabled = false; b.textContent = '點歌'; },4000);
+  }catch(e){ err(e.message); b.disabled = false; }
+}
+async function addUrl(){
+  const u = $('url').value.trim(), name = $('name').value.trim();
+  if(!u) return;
+  if(!name){ toast('請先輸入你的名字'); $('name').focus(); return; }
+  $('goUrl').disabled = true;
+  try{
+    const d = await ask({t:'add',url:u,singer:name});
+    $('url').value = ''; err(''); toast('已加入：' + (d.title||'').slice(0,20));
+  }catch(e){ err(e.message); }
+  $('goUrl').disabled = false;
+}
+/* ---------- 探索 ---------- */
+const REG = [['hk','🇭🇰 香港'],['cn','🇨🇳 大陸'],['tw','🇹🇼 台灣'],['jp','🇯🇵 日本'],['kr','🇰🇷 韓國'],['us','🇺🇸 美國'],['eu','🇪🇺 歐洲']];
+const CAT = [['hot','🔥 現在熱門'],['new','🆕 最新熱歌'],['classic','👑 KTV經典'],['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體']];
+let exReg = localStorage.getItem('rreg') || 'tw', exCat = 'hot', EX = [], exSeq = 0, exDone = false;
+if(!REG.some(r=>r[0]===exReg)) exReg = 'tw';
+function exChips(){
+  $('regs').innerHTML = REG.map(([k,n])=>`<button class="chip ${k===exReg?'on':''}" onclick="exSet('${k}',null)">${n}</button>`).join('');
+  $('cats').innerHTML = CAT.map(([k,n])=>`<button class="chip ${k===exCat?'on':''}" onclick="exSet(null,'${k}')">${n}</button>`).join('');
+}
+function exSet(r,c){ if(r){ exReg = r; localStorage.setItem('rreg',r); } if(c) exCat = c; exChips(); exLoad(); }
+async function exLoad(){
+  const my = ++exSeq;
+  $('exNote').textContent = ''; $('exres').innerHTML = '<li><small>載入中…</small></li>';
+  try{
+    const d = await ask({t:'explore',region:exReg,cat:exCat,sort:sortMode},30000);
+    if(my!==exSeq) return;
+    EX = d.items || []; $('exNote').textContent = d.note || '';
+    if(d.type==='artists'){
+      $('exres').innerHTML = '<li style="border:0">' + EX.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${esc(n)}</button>`).join('') + '</li>';
+    } else {
+      $('exres').innerHTML = EX.map((v,i)=>`<li class="res">${v.thumb?`<img src="${esc(v.thumb)}" alt="">`:''}
+        <div class="t">${esc(v.title)}<br><small>${esc(v.channel||'')}${metaOf(v)}</small></div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:none">
+          <button id="p${i}" onclick="exPick(${i})">點歌</button>
+          <button style="background:#3a2f57" onclick="exVersions(${i})">版本</button>
+        </div></li>`).join('') || '<li><small>沒有資料</small></li>';
+    }
+    err('');
+  }catch(e){ if(my===exSeq){ $('exres').innerHTML = ''; err(e.message); } }
+}
+async function exPick(i){
+  const name = $('name').value.trim();
+  if(!name){ toast('請先輸入你的名字'); $('name').focus(); return; }
+  const v = EX[i], b = $('p'+i); b.disabled = true; b.textContent = '找伴奏…';
+  try{
+    const d = await ask({t:'pick',q:v.q,singer:name},40000);
+    b.textContent = '已點 ✓'; toast('已加入：' + (d.title||'').slice(0,20)); err('');
+  }catch(e){ err(e.message); b.textContent = '點歌'; }
+  setTimeout(()=>{ b.disabled = false; b.textContent = '點歌'; },4000);
+}
+function showSearch(q){ $('q').value = q; search(true); $('q').scrollIntoView({behavior:'smooth',block:'center'}); }
+function exVersions(i){ showSearch(EX[i].q); }
+function exArtist(i){ showSearch(EX[i]); }
+document.querySelectorAll('.sortSel').forEach(x=>x.value = sortMode);
+exChips();
+connect();
+</script></body></html>

@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卡拉OK點歌機</title>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7b2ff7">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:#14101f;color:#f1ecff}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:linear-gradient(90deg,#7b2ff7,#f107a3);flex-wrap:wrap;gap:8px}
+header h1{margin:0;font-size:22px}
+header button{background:#ffffff30;color:#fff;border:0;padding:6px 12px;border-radius:6px;cursor:pointer}
+main{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;padding:16px;max-width:1500px;margin:auto}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:#211a33;border-radius:12px;padding:14px}
+.card+.card{margin-top:16px}
+h2{margin:0 0 10px;font-size:16px;color:#d6b8ff}
+.video{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden;flex:none}
+.video #player{position:absolute;inset:0;width:100%;height:100%}
+.now{margin:10px 0 0;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.now b{font-size:15px;flex:1;min-width:180px}
+button.btn{background:#7b2ff7;color:#fff;border:0;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+button.btn:hover{background:#9448ff}
+button.btn.alt{background:#3a2f57}
+button.btn.red{background:#b3243f}
+input[type=text],input[type=password],select{width:100%;padding:9px 11px;border-radius:8px;border:1px solid #4a3d6e;background:#150f24;color:#fff;font-size:14px}
+select{width:auto;padding:6px 8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.nw{flex-wrap:nowrap}
+.list{list-style:none;margin:0;padding:0;max-height:420px;overflow-y:auto}
+.list li{display:flex;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid #342a50}
+.list img{width:96px;height:54px;object-fit:cover;border-radius:4px;flex:none}
+.info{flex:1;min-width:0}
+.t{font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c{font-size:11px;color:#a99bc9}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;margin-right:6px}
+.b1{background:#f107a3}.b2{background:#2f7bf7}.b3{background:#555}
+.acts{display:flex;flex-direction:column;gap:4px;flex:none}
+.star{background:none;border:0;color:#a99bc9;font-size:22px;cursor:pointer;flex:none;padding:0 4px}
+.star.on{color:#ffc933}
+.empty{color:#8a7bad;font-size:13px;padding:10px 0}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;padding:8px;border:0;border-radius:8px;background:#2c2342;color:#d6b8ff;cursor:pointer;font-size:14px}
+.tabs button.active{background:#7b2ff7;color:#fff}
+.chip{background:#3a2f57;color:#fff;border:0;border-radius:14px;padding:4px 10px;font-size:12px;cursor:pointer;margin:6px 6px 0 0}
+.chip.x{background:transparent;color:#a99bc9;text-decoration:underline}
+label.ck{font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer}
+#settings{display:none;margin:10px 16px 0;max-width:1468px}
+#settings.show{display:block}
+#warn{display:none;background:#5a3b00;color:#ffe3a3;padding:10px 14px;border-radius:8px;margin:10px 16px 0;font-size:13px;line-height:1.6}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;color:#fff;padding:10px 18px;border-radius:20px;display:none;z-index:99}
+small{color:#a99bc9}
+code{background:#0006;padding:1px 5px;border-radius:4px}
+
+/* 舞台覆蓋層：下一首提示、倒數、全螢幕控制 */
+.chip.on{background:#7b2ff7}
+#exNote{display:block;margin:6px 0 2px}
+#remoteBox{display:none;text-align:center}
+#qr{display:inline-block;background:#fff;padding:10px;border-radius:10px;line-height:0}
+#remoteUrl{display:block;word-break:break-all;margin-top:8px}
+#qr2{line-height:0}
+/* 舞台：播放器與資訊列上下排列，任何東西都不蓋在 YouTube 播放器上（符合 YouTube 開發者政策） */
+#stage{background:#000;border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+#stage:fullscreen{border-radius:0}
+#stage:fullscreen .video{aspect-ratio:auto;flex:1;min-height:0}
+#bar{background:#1a1228;color:#fff}
+#banner{padding:6px 14px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:32px}
+#stage:fullscreen #banner{font-size:22px;padding:10px 20px}
+#inter{display:none;align-items:center;gap:18px;padding:10px 16px;flex-wrap:wrap}
+#inter .ibox{flex:1;min-width:180px}
+#inter .lbl{color:#d6b8ff;font-size:13px}
+#inter .ttl{font-size:18px;font-weight:700}
+#inter .sg{color:#ff9be0;font-size:14px;min-height:1.2em}
+#inter .cnt{font-size:40px;font-weight:800;min-width:56px;text-align:center}
+#stage:fullscreen #inter .ttl{font-size:30px}
+#stage:fullscreen #inter .cnt{font-size:64px}
+#interQR{display:none;background:#fff;color:#111;padding:6px;border-radius:8px;font-size:12px;flex-direction:column;align-items:center;gap:3px}
+#fsbar{display:none;gap:8px;padding:8px 16px;flex-wrap:wrap}
+#stage:fullscreen #fsbar{display:flex}
+footer{max-width:1500px;margin:8px auto 24px;padding:0 16px;font-size:12px;color:#a99bc9;line-height:1.7}
+footer a{color:#d6b8ff}
+#adSlot{text-align:center;min-height:90px}
+#adSlot .house{background:#2c2342;border-radius:8px;padding:18px;margin-top:6px;line-height:2}
+#planModal{display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:center;justify-content:center}
+#planModal.show{display:flex}
+.pbox{background:#211a33;border-radius:14px;padding:18px;max-width:440px;width:92%}
+.pbox input{margin:8px 0}
+a.btn{display:inline-block;text-decoration:none}
+</head>
+<body>
+<header>
+  <h1>🎤 卡拉OK點歌機</h1>
+  <div class="row">
+    <button id="planBtn" onclick="openPlan()">🎁 …</button>
+    <button id="installBtn" style="display:none" onclick="installApp()">⬇ 安裝成 App</button>
+    <button onclick="document.getElementById('settings').classList.toggle('show')">⚙ 設定 YouTube API 金鑰</button>
+  </div>
+</header>
+
+<div id="warn"></div>
+
+<div id="settings" class="card">
+  <h2>YouTube Data API v3 金鑰</h2>
+  <div class="row nw">
+    <input type="password" id="apikey" placeholder="貼上你的 API 金鑰（AIza…）">
+    <button class="btn" onclick="saveKey()">儲存</button>
+  </div>
+  <small>金鑰只會儲存在這台電腦的瀏覽器／App 裡，只需輸入一次，不會上傳到任何地方。到 Google Cloud Console 啟用「YouTube Data API v3」即可免費取得；每次搜尋約耗 200 配額單位（每日 10,000），約可搜尋 50 次。</small>
+</div>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>正在播放</h2>
+      <div id="stage">
+        <div class="video"><div id="player"></div></div>
+        <div id="bar">
+          <div id="banner"></div>
+          <div id="inter">
+            <div class="ibox">
+              <div class="lbl">下一首</div>
+              <div class="ttl" id="iTitle"></div>
+              <div class="sg" id="iSinger"></div>
+            </div>
+            <div class="cnt" id="iCount">5</div>
+            <div class="row">
+              <button class="btn" onclick="playNext()">立即開始 ▶</button>
+              <button class="btn alt" onclick="skipNext()">跳過這首</button>
+            </div>
+            <div id="interQR"><div id="qr2"></div><span>📱 掃碼點歌</span></div>
+          </div>
+          <div id="fsbar">
+            <button class="btn alt" onclick="stepSpeed(-1)">🐢 慢</button>
+            <button class="btn alt" onclick="stepSpeed(1)">🐇 快</button>
+            <button class="btn alt" onclick="replay()">重唱</button>
+            <button class="btn" onclick="playNext()">切歌 ⏭</button>
+            <button class="btn red" onclick="toggleFS()">離開全螢幕</button>
+          </div>
+        </div>
+      </div>
+      <div class="now">
+        <b id="nowTitle">尚未播放 — 請先點歌</b>
+        <div class="row">
+          <button class="star" id="nowStar" title="加入最愛" onclick="if(current)toggleFav(current.id)">☆</button>
+          <button class="btn" id="fsbtn" onclick="toggleFS()">⛶ 全螢幕演唱</button>
+          <button class="btn alt" onclick="replay()">重唱</button>
+          <button class="btn" onclick="playNext()">切歌 ⏭</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <small>播放速度：</small>
+        <button class="btn alt" onclick="stepSpeed(-1)">－ 慢</button>
+        <b id="spd" style="min-width:52px;text-align:center">1x</b>
+        <button class="btn alt" onclick="stepSpeed(1)">快 ＋</button>
+        <button class="btn alt" onclick="setSpeed(1)">重設</button>
+        <label class="ck"><input type="checkbox" id="keepspd"> 下一首保持此速度</label>
+      </div>
+    </div>
+    <div class="card" id="adSlot" style="display:none"></div>
+    <div class="card">
+      <h2>已點歌曲佇列（<span id="qcount">0</span>）</h2>
+      <ul class="list" id="queue"></ul>
+      <div class="row" style="margin-top:8px">
+        <button class="btn alt" onclick="reorderFair()">依輪流重新排序</button>
+        <button class="btn red" onclick="clearQueue()">清空佇列</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>點歌設定</h2>
+      <input type="text" id="singer" placeholder="點歌人名字（可留空）">
+      <div id="chips"></div>
+      <div class="row" style="margin-top:10px">
+        <label class="ck"><input type="checkbox" id="fair" checked> 公平輪流（每人輪流唱，避免一人連唱）</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <small>歌曲之間倒數：</small>
+        <select id="cdsec">
+          <option value="0">不倒數</option>
+          <option value="3">3 秒</option>
+          <option value="5">5 秒</option>
+          <option value="10">10 秒</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📱 手機掃碼點歌</h2>
+      <div id="remoteMsg"><small>偵測中…</small></div>
+      <div id="remoteBox">
+        <div id="qr"></div>
+        <small id="remoteUrl"></small>
+        <small style="display:block;margin-top:6px">用手機相機掃描，輸入名字就能搜尋並點歌（建議手機和電腦連同一個 Wi-Fi）。</small>
+        <small id="phoneCount" style="display:block;margin-top:4px"></small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button id="tb-explore" onclick="setTab('explore')">🎼 探索</button>
+        <button id="tb-search" onclick="setTab('search')">🔍 搜尋</button>
+        <button id="tb-fav" onclick="setTab('fav')">★ 最愛</button>
+        <button id="tb-hist" onclick="setTab('hist')">🕘 紀錄</button>
+      </div>
+      <div id="tab-explore">
+        <div id="regChips"></div>
+        <div id="catChips"></div>
+        <small id="exNote"></small>
+        <div class="row" style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
+        <ul class="list" id="exlist" style="margin-top:8px"></ul>
+      </div>
+      <div id="tab-search">
+        <div class="row nw">
+          <input type="text" id="q" placeholder="輸入歌名或歌手，例如：周杰倫 晴天" onkeydown="if(event.key==='Enter')search()">
+          <button class="btn" onclick="search()">搜尋</button>
+        </div>
+        <small>順序：🎤 伴奏MV（無人聲＋字幕）→ 📝 歌詞版 → 其他；只列 10 萬次觀看以上</small>
+        <div class="row" style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
+        <ul class="list" id="results" style="margin-top:8px"><li class="empty">輸入關鍵字開始找歌</li></ul>
+      </div>
+      <div id="tab-fav"><ul class="list" id="favlist"></ul></div>
+      <div id="tab-hist">
+        <ul class="list" id="histlist"></ul>
+        <div class="row" style="margin-top:8px"><button class="btn red" onclick="clearHist()">清除紀錄</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>貼上 YouTube 連結點歌</h2>
+      <div class="row nw">
+        <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=…" onkeydown="if(event.key==='Enter')addUrl()">
+        <button class="btn" onclick="addUrl()">加入</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="planModal"><div class="pbox">
+  <h2>👑 方案與去廣告</h2>
+  <div id="planStatus" style="margin-bottom:8px"></div>
+  <input type="text" id="planKey" placeholder="輸入授權碼" autocomplete="off">
+  <div class="row"><button class="btn" onclick="activateLicense()">啟用授權碼</button><a class="btn alt" id="planBuy" target="_blank" rel="noopener" style="display:none">購買／升級</a><button class="btn alt" onclick="closePlan()">關閉</button></div>
+  <div id="planMsg" style="margin-top:8px;font-size:13px"></div>
+  <small id="planNote"></small>
+</div></div>
+<footer>
+  <a href="privacy.html">隱私權政策</a> ・ <a href="terms.html">服務條款</a><br>
+  本程式使用 YouTube API 服務；使用本程式即表示你同意
+  <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 服務條款</a>，
+  並適用 <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google 隱私權政策</a>。
+  本程式與 YouTube、Google 無隸屬或背書關係。
+</footer>
+<div id="toast"></div>
+<script src="ads.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+let queue = store.get('kqueue',[]), favs = store.get('kfav',[]), hist = store.get('khist',[]), singers = store.get('ksingers',[]);
+let current = null, player = null, ready = false, found = [], cdTimer = null;
+const reg = {};   // id -> 歌曲資料，供按鈕用 id 查詢
+
+/* ---------- 工具 ---------- */
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.x);toast.x=setTimeout(()=>t.style.display='none',2500)}
+function decode(s){const t=document.createElement('textarea');t.innerHTML=s;return t.value}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const thumbOf = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+function getKey(){try{return localStorage.getItem('kkey')||''}catch(e){return ''}}
+function saveKey(){try{localStorage.setItem('kkey',$('apikey').value.trim())}catch(e){}toast('已儲存金鑰');if(typeof exLoad==='function')exLoad();if(typeof exLoad==='function')exLoad();$('settings').classList.remove('show')}
+const persist = () => store.set('kqueue',queue);
+
+/* ---------- 分類：伴奏MV > 歌詞版 > 其他 ---------- */
+function rank(title){
+  const t = title.toLowerCase();
+  if (/karaoke|卡拉ok|卡拉 ok|ktv|伴奏|off ?vocal|instrumental|無人聲|无人声|消音|純音樂|纯音乐|backing track/.test(t)) return 1;
+  if (/歌詞|歌词|lyrics?|lyric video|字幕/.test(t)) return 2;
+  return 3;
+}
+const BADGE = {1:['🎤 伴奏MV','b1'],2:['📝 歌詞版','b2'],3:['其他','b3']};
+
+/* ---------- 搜尋 ---------- */
+const searchCache = new Map(Object.entries(store.get('kcache2',{})));   // 關鍵字 → 結果，6 小時內不重複扣額度（重開程式也保留）
+function saveCache(){
+  const ent = [...searchCache.entries()].sort((a,b)=>b[1].t-a[1].t).slice(0,40);
+  store.set('kcache2',Object.fromEntries(ent));
+}
+let sortMode = store.get('ksort','views'), foundRaw = [];
+if(sortMode!=='new') sortMode = 'views';
+// 先依 🎤伴奏MV → 📝歌詞版 → 其他 分組；同一組內再依「最多觀看」或「最新上傳」排序
+function sortSongs(list,mode,grouped){
+  const key = mode==='new' ? (v=>Date.parse(v.published)||0) : (v=>+v.views||0);
+  return list.map((v,i)=>({v,i})).sort((a,b)=>
+    (grouped===false ? 0 : (a.v.rank||3)-(b.v.rank||3)) || (key(b.v)-key(a.v)) || a.i-b.i).map(x=>x.v);
+}
+const fmtViews = n => n>=1e8 ? (n/1e8).toFixed(1)+'億' : n>=1e4 ? Math.round(n/1e4)+'萬' : String(n||0);
+const metaOf = v => v.views ? ' · 👁 '+fmtViews(v.views)+' 次 · '+String(v.published||'').slice(0,10) : '';
+// light=true：只搜 1 次（伴奏版不足 3 支才補搜歌詞版）；否則搜 2 次。一律只保留 MIN_VIEWS 以上
+async function searchSongs(q,opts){
+  opts = opts || {};
+  const k = (opts.light?'L:':'F:') + q.trim().toLowerCase(), c = searchCache.get(k);
+  if(c && Date.now()-c.t < 6*3600e3) return c.v;
+  if(opts.onMiss) opts.onMiss();
+  const ok = v => (+v.views||0) >= MIN_VIEWS;
+  let lists;
+  if(opts.light){
+    const first = (await yt(q + ' 卡拉OK 伴奏 無人聲 字幕 karaoke')).filter(ok);
+    lists = [first];
+    if(first.filter(v=>rank(v.title)===1).length < 3) lists.push((await yt(q + ' 歌詞版 lyrics')).filter(ok));
+  } else {
+    lists = (await Promise.all([ yt(q + ' 卡拉OK 伴奏 無人聲 字幕 karaoke'), yt(q + ' 歌詞版 lyrics') ])).map(l=>l.filter(ok));
+  }
+  const seen = new Set(), all = [];
+  lists.flat().forEach(v=>{ if(!seen.has(v.id)){ seen.add(v.id); v.rank = rank(v.title); all.push(v);} });
+  searchCache.set(k,{t:Date.now(),v:all}); saveCache();
+  return all;
+}
+function setSort(v){
+  sortMode = v==='new' ? 'new' : 'views'; store.set('ksort',sortMode);
+  document.querySelectorAll('.sortSel').forEach(x=>x.value = sortMode);
+  if(foundRaw.length){ found = sortSongs(foundRaw,sortMode); renderResults(); }
+  exLoad();
+}
+async function search(light){
+  const q = $('q').value.trim(); if(!q) return;
+  if(!PROXY && !getKey()){ $('settings').classList.add('show'); toast('請先設定 YouTube API 金鑰'); return; }
+  setTab('search');
+  $('results').innerHTML = '<li class="empty">搜尋中…</li>';
+  try{
+    foundRaw = await searchSongs(q,{light:!!light}); found = sortSongs(foundRaw,sortMode);
+    renderResults();
+  }catch(e){
+    $('results').innerHTML = '<li class="empty">搜尋失敗：'+esc(e.message)+'</li>';
+  }
+}
+
+/* ---------- 歌曲清單（搜尋結果 / 最愛 / 紀錄共用） ---------- */
+function itemHTML(v){
+  reg[v.id] = reg[v.id] || v;
+  const r = rank(v.title), f = isFav(v.id);
+  return `<li>
+    <img src="${v.thumb||thumbOf(v.id)}" alt="">
+    <div class="info">
+      <div class="t"><span class="badge ${BADGE[r][1]}">${BADGE[r][0]}</span>${esc(v.title)}</div>
+      <div class="c">${esc(v.channel||'')}${metaOf(v)}</div>
+    </div>
+    <div class="acts">
+      <button class="btn" onclick="addById('${v.id}',false)">點歌</button>
+      <button class="btn alt" onclick="addById('${v.id}',true)">插播</button>
+    </div>
+    <button class="star ${f?'on':''}" onclick="toggleFav('${v.id}')">${f?'★':'☆'}</button>
+  </li>`;
+}
+function renderResults(){ $('results').innerHTML = found.length ? found.map(itemHTML).join('') : '<li class="empty">找不到符合條件（10 萬次觀看以上）的結果</li>'; }
+function renderFav(){ $('favlist').innerHTML = favs.length ? favs.map(itemHTML).join('') : '<li class="empty">還沒有收藏，按 ☆ 就能加入最愛</li>'; }
+function renderHist(){ $('histlist').innerHTML = hist.length ? hist.map(itemHTML).join('') : '<li class="empty">尚無播放紀錄</li>'; }
+function refreshLists(){ if(found.length) renderResults(); renderFav(); renderHist(); renderQueue(); }
+function setTab(t){
+  ['explore','search','fav','hist'].forEach(n=>{ $('tab-'+n).style.display = n===t?'block':'none'; $('tb-'+n).classList.toggle('active',n===t); });
+}
+function addById(id,top){ const v=reg[id]; if(v) add(v,top); }
+
+/* ---------- 最愛 / 紀錄 ---------- */
+const isFav = id => favs.some(x=>x.id===id);
+function toggleFav(id){
+  const v = reg[id]; if(!v) return;
+  const i = favs.findIndex(x=>x.id===id);
+  if(i>=0) favs.splice(i,1);
+  else favs.unshift({id:v.id,title:v.title,channel:v.channel||'',thumb:v.thumb||thumbOf(v.id),ts:Date.now()});
+  store.set('kfav',favs); refreshLists();
+}
+function addHist(s){
+  hist = hist.filter(x=>x.id!==s.id);
+  hist.unshift({id:s.id,title:s.title,channel:s.channel||'',thumb:s.thumb||thumbOf(s.id),ts:Date.now()});
+  hist = hist.slice(0,50); store.set('khist',hist);
+}
+function clearHist(){ if(hist.length&&confirm('確定清除播放紀錄？')){hist=[];store.set('khist',hist);renderHist()} }
+
+/* ---------- 點歌人 ---------- */
+function renderChips(){
+  $('chips').innerHTML = singers.map((n,i)=>`<button class="chip" onclick="pickSinger(${i})">${esc(n)}</button>`).join('')
+    + (singers.length?'<button class="chip x" onclick="clearSingers()">清除名單</button>':'');
+}
+function pickSinger(i){ $('singer').value = singers[i]; store.set('ksinger',singers[i]); }
+function clearSingers(){ singers=[]; store.set('ksingers',singers); renderChips(); }
+function rememberSinger(n){
+  if(!n) return;
+  singers = [n,...singers.filter(x=>x!==n)].slice(0,8);
+  store.set('ksingers',singers); renderChips();
+}
+
+/* ---------- 公平輪流 ---------- */
+// 每首歌的「輪次」＝同一人在它前面已排了幾首（目前正在唱的人算已唱一輪）
+function rounds(){
+  const c = {}, cur = current ? (current.singer||'匿名') : null;
+  return queue.map(s=>{
+    const k = s.singer||'匿名';
+    const r = (c[k]||0) + (k===cur?1:0);
+    c[k] = (c[k]||0)+1;
+    return r;
+  });
+}
+function insertFair(s){
+  const R = rounds();
+  const n = queue.filter(x=>x.singer===s.singer).length + (current && current.singer===s.singer ? 1 : 0);
+  let idx = 0;
+  R.forEach((r,i)=>{ if(r<=n) idx=i+1; });
+  queue.splice(idx,0,s);
+}
+function reorderFair(){
+  const R = rounds();
+  queue = queue.map((s,i)=>({s,i,r:R[i]})).sort((a,b)=>a.r-b.r||a.i-b.i).map(x=>x.s);
+  persist(); renderQueue(); toast('已依輪流順序重新排序');
+}
+
+/* ---------- 佇列 ---------- */
+function add(song,top,singerOverride){
+  const name = singerOverride!==undefined ? singerOverride : $('singer').value.trim();
+  const s = {id:song.id,title:song.title,channel:song.channel||'',thumb:song.thumb||thumbOf(song.id),singer:name,ts:Date.now()};
+  reg[s.id] = reg[s.id] || s;
+  if(top) queue.unshift(s);
+  else if($('fair').checked && name) insertFair(s);
+  else queue.push(s);
+  rememberSinger(name);
+  persist(); renderQueue();
+  toast(`已加入（第 ${queue.indexOf(s)+1} 首）：` + s.title.slice(0,20));
+  if(!current && ready) playNext();
+}
+function renderQueue(){
+  $('qcount').textContent = queue.length;
+  $('queue').innerHTML = queue.length ? queue.map((s,i)=>{
+    reg[s.id] = reg[s.id] || s;
+    const f = isFav(s.id);
+    return `<li>
+      <img src="${s.thumb||thumbOf(s.id)}" alt="">
+      <div class="info">
+        <div class="t">${i+1}. ${esc(s.title)}</div>
+        <div class="c">${s.singer?'🎤 '+esc(s.singer)+'　':''}${esc(s.channel||'')}</div>
+      </div>
+      <div class="acts">
+        ${i>0?`<button class="btn alt" onclick="toTop(${i})">置頂</button>`:''}
+        <button class="btn red" onclick="removeAt(${i})">刪除</button>
+      </div>
+      <button class="star ${f?'on':''}" onclick="toggleFav('${s.id}')">${f?'★':'☆'}</button>
+    </li>`;
+  }).join('') : '<li class="empty">佇列是空的</li>';
+  $('nowTitle').textContent = current ? '🎵 ' + current.title + (current.singer?'｜🎤 '+current.singer:'') : '尚未播放 — 請先點歌';
+  const f = current && isFav(current.id);
+  $('nowStar').textContent = f ? '★' : '☆';
+  $('nowStar').classList.toggle('on',!!f);
+  refreshInter();
+  broadcastState();
+}
+function toTop(i){const [s]=queue.splice(i,1);queue.unshift(s);persist();renderQueue()}
+function removeAt(i){queue.splice(i,1);persist();renderQueue()}
+function clearQueue(){if(queue.length&&confirm('確定清空所有已點歌曲？')){queue=[];persist();renderQueue()}}
+
+/* ---------- 歌曲間倒數 ---------- */
+function hideInter(){ if(cdTimer){clearInterval(cdTimer);cdTimer=null} $('inter').style.display='none'; $('interQR').style.display='none'; }
+function fillInter(){
+  const nx = queue[0]; if(!nx) return;
+  $('iTitle').textContent = nx.title;
+  $('iSinger').textContent = nx.singer ? '🎤 演唱：'+nx.singer : '';
+}
+function refreshInter(){
+  if(!cdTimer) return;
+  if(!queue.length){ hideInter(); playNext(); return; }
+  fillInter();
+}
+function startCountdown(){
+  if(!queue.length){ playNext(); return; }
+  let n = +$('cdsec').value;
+  fillInter(); $('iCount').textContent = n; $('inter').style.display = 'flex'; $('interQR').style.display = remote.ok ? 'flex' : 'none';
+  clearInterval(cdTimer);
+  cdTimer = setInterval(()=>{ n--; $('iCount').textContent = n; if(n<=0) playNext(); },1000);
+}
+function skipNext(){
+  queue.shift(); persist(); renderQueue();
+  if(queue.length) startCountdown(); else { hideInter(); playNext(); }
+}
+
+/* ---------- 播放 ---------- */
+function playNext(){
+  hideInter();
+  if(!ready) return;
+  if(queue.length){
+    current = queue.shift(); reg[current.id] = current;
+    persist(); addHist(current);
+    player.loadVideoById(current.id);
+    if(!$('keepspd').checked) speed = 1;
+    showSpeed(); pendingSpeed = true;
+  } else {
+    current = null; try{player.stopVideo()}catch(e){}
+  }
+  renderQueue(); renderHist();
+}
+function replay(){ if(current && ready){ hideInter(); player.seekTo(0,true); player.playVideo(); } }
+
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady = function(){
+  player = new YT.Player('player',{
+    width:'100%',height:'100%',
+    playerVars:{autoplay:1,rel:0,playsinline:1,cc_load_policy:1,hl:'zh-TW',fs:0},
+    events:{
+      onReady:()=>{ready=true; try{const r=player.getAvailablePlaybackRates(); if(r&&r.length>1) rates=r;}catch(e){} if(queue.length && !current) playNext();},
+      onStateChange:e=>{
+        if(e.data===YT.PlayerState.PLAYING) requestWake();
+        if(e.data===YT.PlayerState.PLAYING && pendingSpeed){ pendingSpeed=false; try{player.setPlaybackRate(speed)}catch(err){} }
+        if(e.data===YT.PlayerState.ENDED){
+          if(queue.length && +$('cdsec').value>0) startCountdown(); else playNext();
+        }
+      },
+      onError:e=>{
+        const hint = e.data===153||e.data===152 ? '（請不要直接開檔，改用網址開啟本程式）' : '';
+        toast('此影片無法嵌入播放，自動跳下一首' + hint);
+        setTimeout(playNext,1800);
+      }
+    }
+  });
+};
+
+/* ---------- 全螢幕演唱 + 下一首提示 ---------- */
+function toggleFS(){
+  const s = $('stage');
+  if(document.fullscreenElement) document.exitFullscreen();
+  else if(s.requestFullscreen) s.requestFullscreen().catch(()=>toast('無法進入全螢幕'));
+  else toast('此瀏覽器不支援全螢幕');
+}
+document.addEventListener('fullscreenchange',()=>{
+  $('fsbtn').textContent = document.fullscreenElement ? '離開全螢幕' : '⛶ 全螢幕演唱';
+});
+setInterval(()=>{
+  let txt = '';
+  try{
+    if(ready && current && player.getPlayerState()===1){
+      const t = player.getCurrentTime(), d = player.getDuration();
+      const nm = s => s.title + (s.singer?'｜🎤 '+s.singer:'');
+      if(t<6) txt = '🎵 現在演唱：' + nm(current);
+      else if(queue.length && d>0 && d-t<=20) txt = '⏭ 下一首：' + nm(queue[0]);
+    }
+  }catch(e){}
+  if(Date.now()<flashUntil) txt = flashTxt;
+  const b = $('banner'); b.textContent = txt; b.style.opacity = txt ? 1 : 0;
+},500);
+
+/* ---------- 資料保存期限（YouTube API 資料超過 30 天須更新或刪除） ---------- */
+function pruneOld(){
+  const now = Date.now(), lim = 30*864e5;
+  [queue,hist].forEach(a=>a.forEach(x=>{ if(!x.ts) x.ts = now; }));
+  queue = queue.filter(x=>now-x.ts<lim); hist = hist.filter(x=>now-x.ts<lim);
+  persist(); store.set('khist',hist);
+}
+async function refreshFavs(){
+  const now = Date.now(), old = favs.filter(f=>!f.ts || now-f.ts > 25*864e5);
+  if(!old.length || (!PROXY && !getKey())) return;
+  try{
+    const fresh = await ytVideos(old.map(f=>f.id)), map = new Map(fresh.map(v=>[v.id,v]));
+    favs = favs.filter(f=>!old.includes(f) || map.has(f.id)).map(f=>{
+      const v = map.get(f.id); return (v && old.includes(f)) ? {id:f.id,title:v.title,channel:v.channel,thumb:v.thumb,ts:now} : f; });
+    store.set('kfav',favs); refreshLists();
+  }catch(e){}
+}
+let wakeLock = null;   // 播放時保持螢幕不休眠
+async function requestWake(){ try{ if('wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null}); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && current) requestWake(); });
+
+/* ---------- 播放速度 ---------- */
+let speed = 1, rates = [0.25,0.5,0.75,1,1.25,1.5,1.75,2], pendingSpeed = false, flashTxt = '', flashUntil = 0;
+function flash(m){ flashTxt = m; flashUntil = Date.now() + 1800; }   // 全螢幕時用畫面左上角顯示提示
+function showSpeed(){ $('spd').textContent = speed + 'x'; }
+function setSpeed(r){
+  speed = r; showSpeed();
+  if(ready){ try{player.setPlaybackRate(r)}catch(e){} }
+  flash('⏱ 播放速度 ' + r + 'x');
+}
+function stepSpeed(d){
+  let i = rates.indexOf(speed); if(i<0) i = rates.indexOf(1);
+  i = Math.min(rates.length-1, Math.max(0, i+d));
+  setSpeed(rates[i]);
+}
+
+/* ---------- 貼連結 ---------- */
+async function addUrl(){
+  const u = $('url').value.trim();
+  const m = u.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
+  if(!m){toast('無法辨識這個 YouTube 連結');return}
+  let title = '影片 ' + m[1], channel = '';
+  try{
+    const r = await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+m[1]));
+    const j = await r.json(); title = j.title; channel = j.author_name;
+  }catch(e){}
+  add({id:m[1],title,channel});
+  $('url').value='';
+}
+
+/* ---------- 探索點歌：地區 × 歌手類型、熱門榜、最新熱歌、KTV 經典 ---------- */
+const REGIONS = {
+  hk:{n:'🇭🇰 香港',chart:'HK',lang:'zh-HK',kw:'粵語 新歌'},
+  cn:{n:'🇨🇳 中國大陸',chart:null,lang:'zh-CN',kw:'華語 新歌 MV',note:'YouTube 在中國大陸沒有熱門榜，改顯示華語音樂影片。'},
+  tw:{n:'🇹🇼 台灣',chart:'TW',lang:'zh-TW',kw:'華語 新歌'},
+  jp:{n:'🇯🇵 日本',chart:'JP',lang:'ja',kw:'新曲 MV'},
+  kr:{n:'🇰🇷 韓國',chart:'KR',lang:'ko',kw:'신곡 MV'},
+  us:{n:'🇺🇸 美國',chart:'US',lang:'en',kw:'official music video'},
+  eu:{n:'🇪🇺 歐洲',chart:'GB',lang:'en',kw:'official music video',note:'歐洲以英國榜單為主。'}
+};
+const CATS = [['hot','🔥 現在熱門'],['new','🆕 最新熱歌'],['classic','👑 KTV經典'],['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體']];
+// 歌手名單：每個地區 × 男歌手／女歌手／團體，依人氣整理（韓國、日本、美國參考了公開榜單；其他地區主要憑整理，歡迎指正）
+const ART = {
+  hk:{m:`陳奕迅,張學友,譚詠麟,古巨基,許冠傑,林子祥,張國榮,黎明,劉德華,周柏豪,側田,張敬軒,林峯,李克勤,郭富城,陳小春,謝霆鋒,鄭中基,張智霖,許志安,陳百強,羅文,梁漢文,周國賢,姜濤,盧瀚霆,呂爵安,陳柏宇,方力申,陳曉東`,
+      f:`王菲,容祖兒,鄧紫棋,楊千嬅,陳慧嫻,梅艷芳,衛蘭,何韻詩,薛凱琪,林憶蓮,關淑怡,鄭秀文,陳慧琳,李玟,莫文蔚,彭羚,林欣彤,吳雨霏,謝安琪,李幸倪,陳潔儀,梁詠琪,周慧敏,葉蒨文,蔡卓妍,鍾欣潼,方皓玟`,
+      g:`Beyond,Mirror,草蜢,Twins,Softhard,達明一派,Rubberband,Error,Shine,太極,溫拿樂隊,Dear Jane,at17,Boy'z,農夫,風火海,Cookies`},
+  cn:{m:`薛之謙,周深,毛不易,汪峰,趙雷,李榮浩,許嵩,華晨宇,張傑,朴樹,陳楚生,胡彥斌,李健,刀郎,鄭鈞,崔健,老狼,孫楠,韓磊,騰格爾,楊坤,蔡徐坤,王源,易烊千璽,肖戰,汪蘇瀧,張遠,隔壁老樊,李玉剛`,
+      f:`那英,張靚穎,李宇春,譚維維,韓紅,田震,郁可唯,張碧晨,劉惜君,陳粒,毛阿敏,周筆暢,尚雯婕,吉克雋逸,單依純,曲婉婷,王菲,宋祖英,龔琳娜,黃綺珊,楊鈺瑩,孟美岐,鞠婧祎`,
+      g:`鳳凰傳奇,筷子兄弟,逃跑計劃,新褲子,水木年華,羽泉,TFBOYS,摩登兄弟,痛仰樂隊,二手玫瑰,五條人,萬能青年旅店,房東的貓,花兒樂隊,後海大鞠躬,超載樂隊,唐朝樂隊,黑豹樂隊,零點樂隊,時代少年團,SNH48`},
+  tw:{m:`周杰倫,林俊傑,陶喆,蕭敬騰,王力宏,周傳雄,李聖傑,羅志祥,盧廣仲,韋禮安,張信哲,品冠,周興哲,吳青峰,林宥嘉,張震嶽,伍佰,李宗盛,羅大佑,陳昇,黃品源,周華健,齊秦,費玉清,張宇,光良,楊宗緯,方大同,范逸臣,蔡旻佑`,
+      f:`鄧麗君,蔡依林,張惠妹,田馥甄,孫燕姿,梁靜茹,王心凌,徐佳瑩,陳綺貞,戴佩妮,楊丞琳,劉若英,蔡健雅,張韶涵,范瑋琪,艾怡良,張清芳,黃小琥,江蕙,蔡琴,彭佳慧,魏如萱,李佳薇,梁文音,曾沛慈,萬芳,陳淑樺,楊乃文,郭靜,順子`,
+      g:`五月天,蘇打綠,S.H.E,F.I.R.飛兒樂團,動力火車,信樂團,草東沒有派對,八三夭,玖壹壹,滅火器,告五人,茄子蛋,麋先生,小虎隊,飛輪海,南拳媽媽,無印良品,理想混蛋,怕胖團,美秀集團,Tizzy Bac,拍謝少年,宇宙人,閃靈,傷心欲絕,Energy,By2,Lollipop F,MP魔幻力量`},
+  jp:{m:`米津玄師,藤井風,星野源,菅田將暉,福山雅治,Vaundy,優里,山下達郎,桑田佳祐,玉置浩二,久保田利伸,平井堅,槇原敬之,秦基博,小田和正,清水翔太,三浦大知,浜田省吾,稲葉浩志,長渕剛,斉藤和義,森山直太朗,imase,Eve,尾崎豊,さだまさし,井上陽水,山崎まさよし,吉田拓郎,氷川きよし`,
+      f:`あいみょん,Ado,宇多田ヒカル,中島みゆき,安室奈美恵,浜崎あゆみ,椎名林檎,LiSA,松任谷由実,倖田來未,大塚愛,絢香,中島美嘉,家入レオ,aiko,一青窈,平原綾香,JUJU,西野カナ,藍井エイル,Aimer,milet,tuki.,幾田りら,YUKI,竹内まりや,松田聖子,中森明菜,坂本冬美,石川さゆり,山口百恵,森高千里`,
+      g:`Mrs. GREEN APPLE,Snow Man,YOASOBI,Official髭男dism,King Gnu,back number,RADWIMPS,Mr.Children,B'z,サザンオールスターズ,SMAP,嵐,Perfume,ONE OK ROCK,INI,乃木坂46,King & Prince,SixTONES,ゆず,スピッツ,ヨルシカ,Creepy Nuts,BUMP OF CHICKEN,L'Arc〜en〜Ciel,GLAY,X JAPAN,ZARD,ASIAN KUNG-FU GENERATION,HANA,櫻坂46`},
+  kr:{m:`임영웅,김용빈,박지현,이찬원,조용필,박서진,영탁,성시경,강다니엘,정동원,장민호,카더가든,조째즈,WOODZ,환희,나훈아,이무진,김희재,PSY,G-DRAGON,박진영,이승철,김범수,박효신,10CM,폴킴,이문세,정승환,김종국,TAEYANG`,
+      f:`IU,TAEYEON,화사,백예린,BIBI,이영지,송가인,장윤정,한로로,현아,선미,청하,에일리,박정현,거미,이하이,헤이즈,BoA,이효리,JOY,JENNIE,ROSÉ,LISA,JISOO,SOYOU,이선희,윤하,김완선,백아연,이소라`,
+      g:`BTS,BLACKPINK,IVE,SEVENTEEN,Stray Kids,TWICE,Red Velvet,EXO,BIGBANG,SHINee,Super Junior,NCT,ENHYPEN,TOMORROW X TOGETHER,aespa,LE SSERAFIM,ILLIT,(G)I-DLE,NewJeans,BABYMONSTER,Girls' Generation,ITZY,DAY6,TWS,MAMAMOO,Apink,OH MY GIRL,2PM,MONSTA X,ATEEZ`},
+  us:{m:`Morgan Wallen,Bruno Mars,The Weeknd,Kendrick Lamar,Post Malone,Drake,Justin Bieber,Shaboozey,Eminem,Noah Kahan,Benson Boone,Zach Bryan,Luke Combs,Chris Stapleton,Bad Bunny,Justin Timberlake,Usher,Michael Jackson,Elvis Presley,Frank Sinatra,John Legend,Travis Scott,Tyler The Creator,Jelly Roll,Alex Warren,Jason Aldean,Kenny Chesney,Chris Brown,Johnny Cash,Garth Brooks`,
+      f:`Taylor Swift,Sabrina Carpenter,Lady Gaga,Billie Eilish,Ariana Grande,Olivia Rodrigo,Beyoncé,Chappell Roan,SZA,Tate McRae,Doja Cat,Miley Cyrus,Katy Perry,Rihanna,Whitney Houston,Mariah Carey,Madonna,Britney Spears,Christina Aguilera,Selena Gomez,Lana Del Rey,Kelly Clarkson,P!nk,Alicia Keys,Celine Dion,Cher,Cyndi Lauper,Shania Twain,Carrie Underwood,Demi Lovato`,
+      g:`HUNTR/X,Maroon 5,Imagine Dragons,Twenty One Pilots,Linkin Park,Green Day,Journey,Eagles,Bon Jovi,Fleetwood Mac,Foo Fighters,Red Hot Chili Peppers,Nirvana,Guns N' Roses,Metallica,Backstreet Boys,NSYNC,Destiny's Child,Jonas Brothers,OneRepublic,The Killers,Panic! at the Disco,My Chemical Romance,Paramore,Boyz II Men,Earth Wind & Fire,The Beach Boys,Fall Out Boy,Fifth Harmony,Kings of Leon`},
+  eu:{m:`Ed Sheeran,Harry Styles,Sam Smith,Lewis Capaldi,Elton John,George Michael,Robbie Williams,Rod Stewart,Sting,Phil Collins,Calvin Harris,David Guetta,Myles Smith,Zayn,Liam Gallagher,James Arthur,Passenger,Rag'n'Bone Man,Olly Murs,George Ezra,Tom Grennan,Central Cee,Stormzy,Mika,Avicii,Alan Walker,Kygo,Robin Schulz,Martin Garrix,Tom Odell`,
+      f:`Adele,Dua Lipa,Lola Young,Amy Winehouse,Ellie Goulding,Jessie J,Rita Ora,Annie Lennox,Anne-Marie,Dido,Lily Allen,Charli XCX,RAYE,Sade,Duffy,Paloma Faith,Kate Bush,Zara Larsson,Tove Lo,Robyn,Loreen,Helene Fischer,Nena,Mylène Farmer,Zaz,Angèle,Aya Nakamura,Jessie Ware,Birdy`,
+      g:`Coldplay,Queen,The Beatles,ABBA,Oasis,The Rolling Stones,Take That,Spice Girls,Westlife,a-ha,Roxette,U2,Måneskin,Rammstein,Depeche Mode,Pink Floyd,Led Zeppelin,Radiohead,Arctic Monkeys,Muse,Little Mix,One Direction,JLS,Blur,The Cure,Genesis,Bee Gees,Wham!,Duran Duran,Florence + The Machine,The 1975,Years & Years,Bastille`}
+};
+const CLASSIC = {   // 歌手|歌名;…（KTV 常點經典，每區 30～40 首）
+  hk:`陳奕迅|十年;陳奕迅|富士山下;陳奕迅|K歌之王;陳奕迅|淘汰;陳奕迅|浮誇;陳奕迅|愛情轉移;陳奕迅|好久不見;Beyond|海闊天空;Beyond|光輝歲月;Beyond|真的愛你;張學友|吻別;張學友|祝福;張學友|李香蘭;張國榮|風繼續吹;張國榮|沉默是金;譚詠麟|朋友;譚詠麟|愛在深秋;譚詠麟|講不出再見;陳慧嫻|千千闕歌;王菲|容易受傷的女人;王菲|紅豆;古巨基|愛與誠;古巨基|情歌王;林子祥|分分鐘需要你;草蜢|失戀陣線聯盟;Twins|下一站天后;許冠傑|半斤八兩;鄭秀文|終身美麗;楊千嬅|少女的祈禱;楊千嬅|處處吻;容祖兒|心淡;劉德華|忘情水;劉德華|冰雨;黎明|今夜你會不會來;梅艷芳|床前明月光;梅艷芳|女人花;李克勤|紅日;周柏豪|傳聞`,
+  cn:`趙雷|成都;趙雷|南方姑娘;朴樹|平凡之路;朴樹|那些花兒;毛不易|消愁;毛不易|像我這樣的人;周深|大魚;那英 王菲|相約一九九八;汪峰|春天裡;汪峰|北京北京;筷子兄弟|小蘋果;筷子兄弟|老男孩;張靚穎|畫心;鳳凰傳奇|月亮之上;鳳凰傳奇|最炫民族風;薛之謙|演員;薛之謙|認真的雪;李榮浩|李白;李榮浩|年少有為;許嵩|清明雨上;許嵩|斷橋殘雪;刀郎|羅剎海市;刀郎|2002年的第一場雪;華晨宇|齊天;老狼|同桌的你;張傑|逆戰;張傑|這就是愛;陳楚生|有沒有人告訴你;李健|貝加爾湖畔;孫楠|不見不散;韓紅|天路;那英|征服;田震|野花;水木年華|在他鄉;羽泉|最美;譚維維|烏蘭巴托的夜`,
+  tw:`周杰倫|告白氣球;周杰倫|晴天;周杰倫|稻香;周杰倫|七里香;周杰倫|青花瓷;周杰倫|聽媽媽的話;五月天|倔強;五月天|突然好想你;五月天|知足;五月天|擁抱;田馥甄|小幸運;田馥甄|魔鬼中的天使;孫燕姿|遇見;孫燕姿|綠光;鄧麗君|月亮代表我的心;鄧麗君|甜蜜蜜;蔡依林|日不落;蔡依林|舞孃;張惠妹|聽海;張惠妹|我可以抱你嗎;林俊傑|江南;林俊傑|修煉愛情;蘇打綠|小情歌;梁靜茹|勇氣;梁靜茹|分手快樂;蕭敬騰|王妃;陶喆|愛很簡單;陶喆|普通朋友;王力宏|你不知道的事;王力宏|唯一;張信哲|愛如潮水;劉若英|後來;王心凌|愛你;蔡健雅|紅色高跟鞋;戴佩妮|你要的愛;伍佰|突然的自我;李聖傑|手放開;周傳雄|黃昏;楊丞琳|雨愛;蕭亞軒|最熟悉的陌生人`,
+  jp:`米津玄師|Lemon;米津玄師|感電;米津玄師|馬と鹿;YOASOBI|夜に駆ける;YOASOBI|アイドル;LiSA|紅蓮華;高橋洋子|残酷な天使のテーゼ;Official髭男dism|Pretender;Official髭男dism|Subtitle;中島みゆき|糸;中島みゆき|地上の星;宇多田ヒカル|First Love;宇多田ヒカル|Automatic;SMAP|世界に一つだけの花;back number|高嶺の花子さん;back number|ハッピーエンド;あいみょん|マリーゴールド;あいみょん|裸の心;Ado|うっせぇわ;Ado|唱;RADWIMPS|前前前世;RADWIMPS|スパークル;King Gnu|白日;Mrs. GREEN APPLE|ケセラセラ;Mrs. GREEN APPLE|ライラック;Mrs. GREEN APPLE|青と夏;藤井風|何なんw;藤井風|死ぬのがいいわ;Vaundy|怪獣の花唄;優里|ドライフラワー;星野源|恋;Creepy Nuts|Bling-Bang-Bang-Born;Mr.Children|Tomorrow never knows;B'z|ultra soul;浜崎あゆみ|M;安室奈美恵|Can You Celebrate?;山下達郎|クリスマス・イブ;サザンオールスターズ|真夏の果実`,
+  kr:`BTS|Dynamite;BTS|Spring Day;BTS|Butter;PSY|Gangnam Style;BLACKPINK|DDU-DU DDU-DU;BLACKPINK|How You Like That;BLACKPINK|Pink Venom;少女時代|Gee;Wonder Girls|Tell Me;IU|좋은 날;IU|Blueming;IU|밤편지;BIGBANG|Fantastic Baby;BIGBANG|Bang Bang Bang;NewJeans|Ditto;NewJeans|Hype Boy;aespa|Supernova;aespa|Next Level;2NE1|I Am The Best;TWICE|Cheer Up;TWICE|TT;IVE|Love Dive;IVE|After LIKE;임영웅|이제 나만 믿어요;임영웅|사랑은 늘 도망가;박효신|야생화;성시경|두 사람;이문세|붉은 노을;조용필|킬리만자로의 표범;이승철|소리쳐;이승철|마지막 콘서트;김범수|보고 싶다;태연|I;10CM|그게 아니고;폴킴|비;폴킴|모든 날, 모든 순간;ZICO|아무노래;Stray Kids|특;EXO|Growl;Red Velvet|Psycho;(G)I-DLE|TOMBOY;LE SSERAFIM|ANTIFRAGILE`,
+  us:`Mark Ronson Bruno Mars|Uptown Funk;Bruno Mars|Just the Way You Are;Bruno Mars|When I Was Your Man;Lady Gaga Bruno Mars|Die with a Smile;Taylor Swift|Love Story;Taylor Swift|Shake It Off;Taylor Swift|Blank Space;Journey|Don't Stop Believin';Whitney Houston|I Wanna Dance with Somebody;Whitney Houston|I Will Always Love You;Michael Jackson|Billie Jean;Michael Jackson|Beat It;Lady Gaga Bradley Cooper|Shallow;Katy Perry|Roar;Beyoncé|Halo;Maroon 5|Sugar;Maroon 5|Memories;Eagles|Hotel California;Bon Jovi|Livin' on a Prayer;Cyndi Lauper|Girls Just Want to Have Fun;Celine Dion|My Heart Will Go On;Alicia Keys|Fallin';Kelly Clarkson|Since U Been Gone;P!nk|So What;Imagine Dragons|Believer;Imagine Dragons|Demons;OneRepublic|Counting Stars;The Weeknd|Blinding Lights;Justin Bieber|Sorry;Billie Eilish|bad guy;Ariana Grande|7 rings;Olivia Rodrigo|drivers license;Sabrina Carpenter|Espresso;Chappell Roan|Good Luck, Babe!;Guns N' Roses|Sweet Child O' Mine;Backstreet Boys|I Want It That Way;Elvis Presley|Can't Help Falling in Love;Frank Sinatra|My Way;Britney Spears|...Baby One More Time;Christina Aguilera|Genie in a Bottle;Linkin Park|In the End;Alex Warren|Ordinary;Shaboozey|A Bar Song (Tipsy)`,
+  eu:`Adele|Someone Like You;Adele|Hello;Adele|Rolling in the Deep;Ed Sheeran|Shape of You;Ed Sheeran|Perfect;Ed Sheeran|Thinking Out Loud;Queen|Bohemian Rhapsody;Queen|Don't Stop Me Now;Queen|We Will Rock You;ABBA|Dancing Queen;ABBA|Mamma Mia;ABBA|Waterloo;The Beatles|Hey Jude;The Beatles|Let It Be;Coldplay|Yellow;Coldplay|Viva la Vida;Coldplay|Fix You;Dua Lipa|Levitating;Dua Lipa|Don't Start Now;George Michael|Careless Whisper;Lewis Capaldi|Someone You Loved;Måneskin|Beggin';a-ha|Take On Me;Elton John|Your Song;Elton John|I'm Still Standing;Oasis|Wonderwall;Oasis|Don't Look Back in Anger;Harry Styles|As It Was;Sam Smith|Stay With Me;Amy Winehouse|Valerie;Amy Winehouse|Rehab;Lola Young|Messy;Myles Smith|Stargazing;Rod Stewart|Sailing;Wham!|Last Christmas;Roxette|It Must Have Been Love;Spice Girls|Wannabe;Take That|Back for Good;Westlife|My Love;Robbie Williams|Angels;Bee Gees|Stayin' Alive;Pink Floyd|Wish You Were Here;Daft Punk|Get Lucky;Aqua|Barbie Girl`
+};
+
+function cleanTitle(t){
+  let s = t.replace(/[\(（\[【「『][^\)）\]】」』]*?(official|mv|m\/v|music video|lyric|audio|visualizer|hd|4k|1080|完整版|官方|高畫質|歌詞|字幕|動態|teaser|performance)[^\)）\]】」』]*?[\)）\]】」』]/gi,' ');
+  s = s.replace(/\b(official\s+)?(music\s+video|lyric\s+video|mv|m\/v)\b/gi,' ');
+  s = s.replace(/\s+/g,' ').trim();
+  return s || t;
+}
+const exCache = store.get('kexp2',{});   // 榜單快取：熱門榜 3 小時、最新熱歌 6 小時
+async function cachedEx(key,ttl,fn,onMiss){
+  const c = exCache[key];
+  if(c && Date.now()-c.t < ttl) return c.v;
+  if(onMiss) onMiss();
+  const v = await fn();
+  exCache[key] = {t:Date.now(),v}; store.set('kexp2',exCache);
+  return v;
+}
+const CFG = window.KARAOKE_CONFIG || {};
+const PROXY = (CFG.apiBase||'').replace(/\/+$/,'');          // 有設定 = 走代理伺服器，使用者不需要金鑰
+const MIN_VIEWS = CFG.minViews ?? 100000;                     // 搜尋結果最低觀看次數
+async function proxyGet(path,params){
+  const r = await fetch(PROXY+path+'?'+new URLSearchParams(params));
+  let j = {}; try{ j = await r.json() }catch(e){}
+  if(!r.ok) throw new Error(j.error || '伺服器忙碌，請稍後再試');
+  return j.items || [];
+}
+async function ytGet(path,params){
+  if(!getKey()) throw new Error('請先設定 YouTube API 金鑰');
+  const r = await fetch('https://www.googleapis.com/youtube/v3/'+path+'?'+new URLSearchParams({...params,key:getKey()}));
+  const j = await r.json();
+  if(j.error) throw new Error(j.error.message || 'API 錯誤');
+  return j.items || [];
+}
+const toItem = (id,sn,st) => ({id,title:decode(sn.title),channel:decode(sn.channelTitle),
+  thumb:(sn.thumbnails.medium||sn.thumbnails.default).url, views:+(st&&st.viewCount)||0, published:sn.publishedAt||''});
+// 補上觀看數與上傳日期（videos.list：每 50 支只耗 1 單位）
+async function ytVideos(ids){
+  if(!ids.length) return [];
+  if(PROXY) return proxyGet('/yt/videos',{ids:ids.join(',')});
+  const out = [];
+  for(let i=0;i<ids.length;i+=50){
+    const items = await ytGet('videos',{part:'snippet,statistics',id:ids.slice(i,i+50).join(','),maxResults:50});
+    out.push(...items.map(x=>toItem(x.id,x.snippet,x.statistics)));
+  }
+  return out;
+}
+async function yt(q){
+  if(PROXY) return proxyGet('/yt/search',{q});
+  const r = await ytGet('search',{part:'snippet',type:'video',videoEmbeddable:'true',maxResults:25,q});
+  return ytVideos(r.filter(i=>i.id&&i.id.videoId).map(i=>i.id.videoId));
+}
+// 熱門榜：videos.list 只耗 1 單位
+const ytChart = async code => PROXY ? proxyGet('/yt/chart',{region:code})
+  : (await ytGet('videos',{part:'snippet,statistics',chart:'mostPopular',videoCategoryId:'10',regionCode:code,maxResults:30})).map(i=>toItem(i.id,i.snippet,i.statistics));
+// 最新熱歌：近 30 天、觀看最多的音樂影片
+const ytNew = async (region,R) => {
+  if(PROXY) return proxyGet('/yt/new',{region});
+  const p = {part:'snippet',type:'video',videoCategoryId:'10',order:'viewCount',maxResults:25,q:R.kw,relevanceLanguage:R.lang,
+             publishedAfter:new Date(Date.now()-30*864e5).toISOString()};
+  if(R.chart) p.regionCode = R.chart;
+  return ytVideos((await ytGet('search',p)).filter(i=>i.id&&i.id.videoId).map(i=>i.id.videoId));
+};
+async function exploreData(region,cat,onMiss,sort){
+  const R = REGIONS[region]; if(!R) throw new Error('未知的地區');
+  if(!CATS.some(c=>c[0]===cat)) throw new Error('未知的分類');
+  if(['m','f','g'].includes(cat)) return {type:'artists',items:ART[region][cat].split(','),note:''};
+  if(cat==='classic') return {type:'songs',note:'KTV 常見經典歌曲；點歌時會自動找伴奏版。',
+    items:CLASSIC[region].split(';').map(x=>{ const [a,t]=x.split('|'); return {title:t,channel:a,q:a+' '+t}; })};
+  let items = null, note = '';
+  if(cat==='hot' && R.chart){
+    try{ items = await cachedEx('hot:'+R.chart,3*3600e3,()=>ytChart(R.chart)); note = 'YouTube 音樂熱門榜；點歌時會自動找伴奏版。'; }
+    catch(e){ items = null; }
+  }
+  if(!items){
+    items = await cachedEx('new:'+region,6*3600e3,()=>ytNew(region,R),onMiss);
+    note = (R.note ? R.note+' ' : '') + '近 30 天內發行、觀看最多的音樂影片；點歌時會自動找伴奏版。';
+  }
+  return {type:'songs',note,items:sortSongs(items.filter(v=>(+v.views||0)>=MIN_VIEWS),sort||sortMode,false).map(v=>({...v,q:cleanTitle(v.title)}))};
+}
+// 自動挑伴奏版：伴奏MV > 歌詞版 > 其他（結果已依此排序）
+async function pickKaraoke(q,singerOverride,onMiss){
+  const list = sortSongs(await searchSongs(q,{light:true,onMiss}),'views');
+  if(!list.length) throw new Error('找不到「'+q+'」的伴奏版');
+  const best = list[0];
+  add(best,false,singerOverride);
+  return best;
+}
+
+let exRegion = store.get('kreg','tw'), exCat = 'hot', exItems = [], exSeq = 0;
+if(!REGIONS[exRegion]) exRegion = 'tw';
+function exChips(){
+  $('regChips').innerHTML = Object.entries(REGIONS).map(([k,r])=>`<button class="chip ${k===exRegion?'on':''}" onclick="exSet('${k}',null)">${r.n}</button>`).join('');
+  $('catChips').innerHTML = CATS.map(([k,n])=>`<button class="chip ${k===exCat?'on':''}" onclick="exSet(null,'${k}')">${n}</button>`).join('');
+}
+function exSet(r,c){ if(r){ exRegion = r; store.set('kreg',r); } if(c) exCat = c; exChips(); exLoad(); }
+function exItemHTML(v,i){
+  return `<li>${v.thumb?`<img src="${esc(v.thumb)}" alt="">`:''}
+    <div class="info"><div class="t">${esc(v.title)}</div><div class="c">${esc(v.channel||'')}${metaOf(v)}</div></div>
+    <div class="acts">
+      <button class="btn" onclick="exPick(${i})">點歌</button>
+      <button class="btn alt" onclick="exVersions(${i})">選版本</button>
+    </div></li>`;
+}
+async function exLoad(){
+  const my = ++exSeq, box = $('exlist');
+  box.innerHTML = '<li class="empty">載入中…</li>'; $('exNote').textContent = '';
+  try{
+    const d = await exploreData(exRegion,exCat);
+    if(my!==exSeq) return;
+    exItems = d.items; $('exNote').textContent = d.note || '';
+    box.innerHTML = d.type==='artists'
+      ? '<li style="display:block;border:0">' + d.items.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${esc(n)}</button>`).join('') + '</li>'
+      : (d.items.map(exItemHTML).join('') || '<li class="empty">沒有資料</li>');
+  }catch(e){ if(my===exSeq) box.innerHTML = '<li class="empty">載入失敗：'+esc(e.message)+'</li>'; }
+}
+async function exPick(i){
+  const v = exItems[i]; toast('尋找伴奏版中…');
+  try{ await pickKaraoke(v.q); }catch(e){ toast(e.message); }
+}
+function exVersions(i){ $('q').value = exItems[i].q; search(true); }
+function exArtist(i){ $('q').value = exItems[i]; search(true); }
+
+/* ---------- 手機掃碼點歌（WebRTC 點對點，不需要自己架伺服器） ---------- */
+const remote = {ok:false,url:''};
+const phones = new Set();
+let hostPeer = null, phoneSearches = 0, hostRetry = 0;
+const MAX_PHONE_SEARCH = 30;   // 手機端未快取搜尋次數上限，保護免費額度
+const ICE = {iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}]};
+
+function makeQR(id,text,size){
+  const el = $(id); el.innerHTML = '';
+  new QRCode(el,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+}
+function peerId(){
+  let id = store.get('kpeer','');
+  if(!/^kar[a-z0-9]{14}$/.test(id)){
+    const a = new Uint8Array(14); crypto.getRandomValues(a);
+    id = 'kar' + Array.from(a,x=>'abcdefghijklmnopqrstuvwxyz0123456789'[x%36]).join('');
+    store.set('kpeer',id);
+  }
+  return id;
+}
+function remoteMsg(t){ $('remoteMsg').style.display='block'; $('remoteBox').style.display='none'; $('remoteMsg').innerHTML='<small>'+t+'</small>'; }
+function updatePhones(){ $('phoneCount').textContent = phones.size ? '📱 已連線手機：' + phones.size : ''; }
+function stateMsg(){
+  return {t:'state',
+    current: current ? {title:current.title,singer:current.singer||''} : null,
+    queue: queue.slice(0,30).map(s=>({title:s.title,singer:s.singer||''}))};
+}
+function sendState(c){ try{ if(c.open) c.send(stateMsg()) }catch(e){} }
+function broadcastState(){ if(phones.size) phones.forEach(sendState); }
+
+function initRemote(){
+  const hosted = /^https?:$/.test(location.protocol) && !['localhost','127.0.0.1'].includes(location.hostname);
+  if(!hosted){ remoteMsg('手機點歌需要把本程式放到網站上（例如 GitHub Pages）再用網址開啟，詳見 README。'); return; }
+  if(typeof Peer==='undefined' || typeof QRCode==='undefined'){ remoteMsg('元件載入失敗，請確認電腦有連網後重新整理。'); return; }
+  remoteMsg('手機點歌連線中…');
+  startHost();
+}
+function startHost(){
+  const id = peerId();
+  try{ hostPeer && hostPeer.destroy() }catch(e){}
+  hostPeer = new Peer(id,{config:ICE});
+  hostPeer.on('open',()=>{
+    hostRetry = 0;
+    const u = new URL('remote.html',location.href); u.hash = id;
+    remote.url = u.href; remote.ok = true;
+    makeQR('qr',remote.url,170); makeQR('qr2',remote.url,110);
+    $('remoteUrl').textContent = remote.url;
+    $('remoteMsg').style.display = 'none'; $('remoteBox').style.display = 'block';
+  });
+  hostPeer.on('connection',conn=>{
+    conn.on('open',()=>{ phones.add(conn); updatePhones(); sendState(conn); });
+    conn.on('data',d=>onPhoneData(conn,d));
+    const gone = ()=>{ phones.delete(conn); updatePhones(); };
+    conn.on('close',gone); conn.on('error',gone);
+  });
+  hostPeer.on('disconnected',()=>{ try{hostPeer.reconnect()}catch(e){} });
+  hostPeer.on('error',err=>{
+    remote.ok = false;
+    if(err.type==='unavailable-id' && hostRetry>=6){ remoteMsg('這個點歌機似乎已在另一個視窗開啟，請關閉其他視窗後重新整理。'); return; }
+    hostRetry++;
+    remoteMsg('手機點歌連線中斷，重試中…（' + esc(err.type||'error') + '）');
+    setTimeout(startHost,5000);
+  });
+}
+
+async function onPhoneData(conn,d){
+  if(!d || typeof d!=='object') return;
+  const miss = () => {
+    if(phoneSearches>=MAX_PHONE_SEARCH) throw new Error('手機搜尋次數已達上限（'+MAX_PHONE_SEARCH+' 次），請在電腦上操作，或重新整理電腦頁面');
+    phoneSearches++;
+  };
+  const singer = String(d.singer||'').trim().slice(0,20);
+  try{
+    if(d.t==='hello'){ sendState(conn); }
+    else if(d.t==='search'){
+      const q = String(d.q||'').trim().slice(0,80);
+      if(!q) throw new Error('請輸入關鍵字');
+      const items = sortSongs(await searchSongs(q,{light:!!d.light,onMiss:miss}),d.sort==='new'?'new':'views');
+      conn.send({t:'results',rid:d.rid,items:items.map(v=>({id:v.id,title:v.title,channel:v.channel,thumb:v.thumb,rank:v.rank,views:v.views,published:v.published}))});
+    }
+    else if(d.t==='explore'){
+      const r = await exploreData(String(d.region||''),String(d.cat||''),miss,d.sort==='new'?'new':'views');
+      conn.send({t:'explored',rid:d.rid,type:r.type,note:r.note||'',
+        items:r.items.map(v=>typeof v==='string' ? v : {title:v.title,channel:v.channel,thumb:v.thumb,q:v.q,views:v.views,published:v.published})});
+    }
+    else if(d.t==='pick'){
+      const q = String(d.q||'').trim().slice(0,100);
+      if(!q) throw new Error('缺少歌名');
+      const best = await pickKaraoke(q,singer,miss);
+      toast('📱 '+(singer||'手機')+' 點了：'+best.title.slice(0,18));
+      conn.send({t:'added',rid:d.rid,title:best.title});
+    }
+    else if(d.t==='add'){
+      let id = String(d.id||'');
+      if(!id){ const m = String(d.url||'').match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/); id = m ? m[1] : ''; }
+      if(!/^[\w-]{11}$/.test(id)) throw new Error('無法辨識這個 YouTube 連結');
+      let title = String(d.title||'').slice(0,200), channel = String(d.channel||'').slice(0,100);
+      if(!title){
+        title = '影片 ' + id;
+        try{
+          const r = await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id));
+          const j = await r.json(); title = j.title || title; channel = j.author_name || '';
+        }catch(e){}
+      }
+      add({id,title,channel},false,singer);
+      toast('📱 '+(singer||'手機')+' 點了：'+title.slice(0,18));
+      conn.send({t:'added',rid:d.rid,title});
+    }
+  }catch(e){ try{ conn.send({t:'err',rid:d.rid,msg:e.message||'發生錯誤'}) }catch(_){} }
+}
+
+/* ---------- 安裝成 App（PWA） ---------- */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredInstall = e; $('installBtn').style.display = 'inline-block'; });
+window.addEventListener('appinstalled',()=>{ $('installBtn').style.display = 'none'; });
+function installApp(){
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.finally(()=>{ deferredInstall = null; $('installBtn').style.display = 'none'; });
+}
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- 初始化 ---------- */
+if(!Array.isArray(queue)) queue=[];
+$('apikey').value = getKey();
+if(!PROXY && !getKey()) $('settings').classList.add('show');
+if(PROXY){ $('settings').style.display = 'none'; const kb = document.querySelector('header button[onclick*="settings"]'); if(kb) kb.style.display = 'none'; }
+document.querySelectorAll('.sortSel').forEach(x=>x.value = sortMode);
+$('singer').value = store.get('ksinger','');
+$('singer').addEventListener('input',()=>store.set('ksinger',$('singer').value));
+$('fair').checked = store.get('kfair',true);
+$('fair').addEventListener('change',()=>store.set('kfair',$('fair').checked));
+$('cdsec').value = store.get('kcd','5');
+$('cdsec').addEventListener('change',()=>store.set('kcd',$('cdsec').value));
+$('keepspd').checked = store.get('kkeepspd',false);
+$('keepspd').addEventListener('change',()=>store.set('kkeepspd',$('keepspd').checked));
+if(location.protocol === 'file:'){
+  const w = $('warn'); w.style.display='block';
+  w.innerHTML = '⚠ 目前是直接用檔案開啟，YouTube 可能拒絕嵌入播放（錯誤 153），手機點歌也無法使用。請依 README 把本程式放到網站（例如 GitHub Pages）後，用網址開啟。';
+}
+pruneOld(); renderChips(); setTab('explore'); refreshLists(); initRemote(); exChips(); exLoad(); refreshFavs(); initAds();
+</script>
+</body>
+</html>
