@@ -195,8 +195,8 @@ async function addUrl(){
 }
 /* ---------- 探索 ---------- */
 const REG = [['hk','🇭🇰 香港'],['cn','🇨🇳 大陸'],['tw','🇹🇼 台灣'],['jp','🇯🇵 日本'],['kr','🇰🇷 韓國'],['us','🇺🇸 美國'],['eu','🇪🇺 歐洲']];
-const CAT = [['hot','🔥 現在熱門'],['new','🆕 最新熱歌'],['classic','👑 KTV經典'],['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體']];
-let exReg = localStorage.getItem('rreg') || 'tw', exCat = 'hot', EX = [], exSeq = 0, exDone = false;
+const CAT = [['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體'],['classic','👑 KTV經典']];
+let exReg = localStorage.getItem('rreg') || 'tw', exCat = 'm', EX = [], exSeq = 0, exDone = false;
 if(!REG.some(r=>r[0]===exReg)) exReg = 'tw';
 function exChips(){
   $('regs').innerHTML = REG.map(([k,n])=>`<button class="chip ${k===exReg?'on':''}" onclick="exSet('${k}',null)">${n}</button>`).join('');
@@ -211,7 +211,7 @@ async function exLoad(){
     if(my!==exSeq) return;
     EX = d.items || []; $('exNote').textContent = d.note || '';
     if(d.type==='artists'){
-      $('exres').innerHTML = '<li style="border:0">' + EX.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${esc(n)}</button>`).join('') + '</li>';
+      $('exres').innerHTML = '<li style="border:0">' + EX.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${i<(d.young||0)?'🌱 ':''}${esc(n)}</button>`).join('') + '</li>';
     } else {
       $('exres').innerHTML = EX.map((v,i)=>`<li class="res">${v.thumb?`<img src="${esc(v.thumb)}" alt="">`:''}
         <div class="t">${esc(v.title)}<br><small>${esc(v.channel||'')}${metaOf(v)}</small></div>

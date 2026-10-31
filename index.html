@@ -86,8 +86,11 @@ code{background:#0006;padding:1px 5px;border-radius:4px}
 #stage:fullscreen #fsbar{display:flex}
 footer{max-width:1500px;margin:8px auto 24px;padding:0 16px;font-size:12px;color:#a99bc9;line-height:1.7}
 footer a{color:#d6b8ff}
-#adSlot{text-align:center;min-height:90px}
-#adSlot .house{background:#2c2342;border-radius:8px;padding:18px;margin-top:6px;line-height:2}
+#adBreak{display:none;gap:16px;align-items:center;padding:12px 16px;flex-wrap:wrap;background:#241a3a}
+#adBreak .abMain{flex:1;min-width:240px;text-align:center}
+#adBreak .abSide{display:flex;flex-direction:column;align-items:center;gap:6px}
+#adBreak .abCnt{font-size:40px;font-weight:800;line-height:1}
+#adBreak .house{background:#2c2342;border-radius:8px;padding:16px;line-height:1.9}
 #planModal{display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:center;justify-content:center}
 #planModal.show{display:flex}
 .pbox{background:#211a33;border-radius:14px;padding:18px;max-width:440px;width:92%}
@@ -137,6 +140,7 @@ a.btn{display:inline-block;text-decoration:none}
             </div>
             <div id="interQR"><div id="qr2"></div><span>📱 掃碼點歌</span></div>
           </div>
+          <div id="adBreak"></div>
           <div id="fsbar">
             <button class="btn alt" onclick="stepSpeed(-1)">🐢 慢</button>
             <button class="btn alt" onclick="stepSpeed(1)">🐇 快</button>
@@ -164,7 +168,6 @@ a.btn{display:inline-block;text-decoration:none}
         <label class="ck"><input type="checkbox" id="keepspd"> 下一首保持此速度</label>
       </div>
     </div>
-    <div class="card" id="adSlot" style="display:none"></div>
     <div class="card">
       <h2>已點歌曲佇列（<span id="qcount">0</span>）</h2>
       <ul class="list" id="queue"></ul>
@@ -245,12 +248,14 @@ a.btn{display:inline-block;text-decoration:none}
   </section>
 </main>
 <div id="planModal"><div class="pbox">
-  <h2>👑 方案與去廣告</h2>
+  <h2>👑 方案與升級</h2>
   <div id="planStatus" style="margin-bottom:8px"></div>
-  <input type="text" id="planKey" placeholder="輸入授權碼" autocomplete="off">
-  <div class="row"><button class="btn" onclick="activateLicense()">啟用授權碼</button><a class="btn alt" id="planBuy" target="_blank" rel="noopener" style="display:none">購買／升級</a><button class="btn alt" onclick="closePlan()">關閉</button></div>
+  <div id="planPrice" style="margin-bottom:8px;color:#ffc933"></div>
+  <input type="text" id="planKey" placeholder="輸入升級碼（例如 K9XP-4MQ2）" autocomplete="off" autocapitalize="characters">
+  <div class="row"><button class="btn" onclick="activateCode()">啟用升級碼</button><a class="btn alt" id="planBuy" target="_blank" rel="noopener" style="display:none">購買升級碼</a><button class="btn alt" onclick="closePlan()">關閉</button></div>
   <div id="planMsg" style="margin-top:8px;font-size:13px"></div>
   <small id="planNote"></small>
+  <small style="display:block;margin-top:8px">你的裝置代碼：<code id="planDev"></code> <button class="btn alt" style="padding:2px 8px" onclick="copyDev()">複製</button><br>升級碼只能在產生後 24 小時內輸入；成功啟用後，這台裝置永久免廣告。更換裝置或清除瀏覽器資料後，請聯絡開發者並提供裝置代碼。</small>
 </div></div>
 <footer>
   <a href="privacy.html">隱私權政策</a> ・ <a href="terms.html">服務條款</a><br>
@@ -490,15 +495,22 @@ function skipNext(){
 }
 
 /* ---------- 播放 ---------- */
+let sinceBreak = ((window.KARAOKE_CONFIG||{}).ads||{}).atStart===false ? 0 : 999, inBreak = false;   // 免費版：開始時與每 N 首出現一次廣告
 function playNext(){
+  if(inBreak) return;
   hideInter();
   if(!ready) return;
+  if(queue.length && typeof adBreakDue==='function' && adBreakDue(sinceBreak)){
+    inBreak = true; try{player.stopVideo()}catch(e){}
+    startAdBreak(()=>{ inBreak = false; sinceBreak = 0; playNext(); });
+    return;
+  }
   if(queue.length){
     current = queue.shift(); reg[current.id] = current;
     persist(); addHist(current);
     player.loadVideoById(current.id);
     if(!$('keepspd').checked) speed = 1;
-    showSpeed(); pendingSpeed = true;
+    showSpeed(); pendingSpeed = true; sinceBreak++;
   } else {
     current = null; try{player.stopVideo()}catch(e){}
   }
@@ -519,7 +531,7 @@ window.onYouTubeIframeAPIReady = function(){
         if(e.data===YT.PlayerState.PLAYING) requestWake();
         if(e.data===YT.PlayerState.PLAYING && pendingSpeed){ pendingSpeed=false; try{player.setPlaybackRate(speed)}catch(err){} }
         if(e.data===YT.PlayerState.ENDED){
-          if(queue.length && +$('cdsec').value>0) startCountdown(); else playNext();
+          if(queue.length && +$('cdsec').value>0 && !(typeof adBreakDue==='function' && adBreakDue(sinceBreak))) startCountdown(); else playNext();
         }
       },
       onError:e=>{
@@ -615,7 +627,7 @@ const REGIONS = {
   us:{n:'🇺🇸 美國',chart:'US',lang:'en',kw:'official music video'},
   eu:{n:'🇪🇺 歐洲',chart:'GB',lang:'en',kw:'official music video',note:'歐洲以英國榜單為主。'}
 };
-const CATS = [['hot','🔥 現在熱門'],['new','🆕 最新熱歌'],['classic','👑 KTV經典'],['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體']];
+const CATS = [['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體'],['classic','👑 KTV經典']];
 // 歌手名單：每個地區 × 男歌手／女歌手／團體，依人氣整理（韓國、日本、美國參考了公開榜單；其他地區主要憑整理，歡迎指正）
 const ART = {
   hk:{m:`陳奕迅,張學友,譚詠麟,古巨基,許冠傑,林子祥,張國榮,黎明,劉德華,周柏豪,側田,張敬軒,林峯,李克勤,郭富城,陳小春,謝霆鋒,鄭中基,張智霖,許志安,陳百強,羅文,梁漢文,周國賢,姜濤,盧瀚霆,呂爵安,陳柏宇,方力申,陳曉東`,
@@ -636,9 +648,33 @@ const ART = {
   us:{m:`Morgan Wallen,Bruno Mars,The Weeknd,Kendrick Lamar,Post Malone,Drake,Justin Bieber,Shaboozey,Eminem,Noah Kahan,Benson Boone,Zach Bryan,Luke Combs,Chris Stapleton,Bad Bunny,Justin Timberlake,Usher,Michael Jackson,Elvis Presley,Frank Sinatra,John Legend,Travis Scott,Tyler The Creator,Jelly Roll,Alex Warren,Jason Aldean,Kenny Chesney,Chris Brown,Johnny Cash,Garth Brooks`,
       f:`Taylor Swift,Sabrina Carpenter,Lady Gaga,Billie Eilish,Ariana Grande,Olivia Rodrigo,Beyoncé,Chappell Roan,SZA,Tate McRae,Doja Cat,Miley Cyrus,Katy Perry,Rihanna,Whitney Houston,Mariah Carey,Madonna,Britney Spears,Christina Aguilera,Selena Gomez,Lana Del Rey,Kelly Clarkson,P!nk,Alicia Keys,Celine Dion,Cher,Cyndi Lauper,Shania Twain,Carrie Underwood,Demi Lovato`,
       g:`HUNTR/X,Maroon 5,Imagine Dragons,Twenty One Pilots,Linkin Park,Green Day,Journey,Eagles,Bon Jovi,Fleetwood Mac,Foo Fighters,Red Hot Chili Peppers,Nirvana,Guns N' Roses,Metallica,Backstreet Boys,NSYNC,Destiny's Child,Jonas Brothers,OneRepublic,The Killers,Panic! at the Disco,My Chemical Romance,Paramore,Boyz II Men,Earth Wind & Fire,The Beach Boys,Fall Out Boy,Fifth Harmony,Kings of Leon`},
-  eu:{m:`Ed Sheeran,Harry Styles,Sam Smith,Lewis Capaldi,Elton John,George Michael,Robbie Williams,Rod Stewart,Sting,Phil Collins,Calvin Harris,David Guetta,Myles Smith,Zayn,Liam Gallagher,James Arthur,Passenger,Rag'n'Bone Man,Olly Murs,George Ezra,Tom Grennan,Central Cee,Stormzy,Mika,Avicii,Alan Walker,Kygo,Robin Schulz,Martin Garrix,Tom Odell`,
+  eu:{m:`Ed Sheeran,Harry Styles,Sam Smith,Lewis Capaldi,Elton John,George Michael,Robbie Williams,Rod Stewart,Sting,Phil Collins,Calvin Harris,David Guetta,Myles Smith,Zayn,Liam Gallagher,James Arthur,Passenger,Rag'n'Bone Man,Olly Murs,George Ezra,Tom Grennan,Central Cee,Stormzy,Mika,James Blunt,Hozier,Craig David,Jamie Cullum,Paolo Nutini,Tom Odell`,
       f:`Adele,Dua Lipa,Lola Young,Amy Winehouse,Ellie Goulding,Jessie J,Rita Ora,Annie Lennox,Anne-Marie,Dido,Lily Allen,Charli XCX,RAYE,Sade,Duffy,Paloma Faith,Kate Bush,Zara Larsson,Tove Lo,Robyn,Loreen,Helene Fischer,Nena,Mylène Farmer,Zaz,Angèle,Aya Nakamura,Jessie Ware,Birdy`,
       g:`Coldplay,Queen,The Beatles,ABBA,Oasis,The Rolling Stones,Take That,Spice Girls,Westlife,a-ha,Roxette,U2,Måneskin,Rammstein,Depeche Mode,Pink Floyd,Led Zeppelin,Radiohead,Arctic Monkeys,Muse,Little Mix,One Direction,JLS,Blur,The Cure,Genesis,Bee Gees,Wham!,Duran Duran,Florence + The Machine,The 1975,Years & Years,Bastille`}
+};
+// 新生代（出道 10 年內，約 2016 年後）：每個地區 × 男／女／團體。名單前面會加 🌱 標記，並排在最前面
+const YOUNG = {
+  hk:{m:`姜濤,盧瀚霆,陳卓賢,呂爵安,柳應廷,魏浚笙,MC張天賦,林家謙,Tyson Yoshi,湯令山,陳健安,洪嘉豪,張馳豪,Regent,郭澧羲,Edwin Tong`,
+      f:`姚焯菲,陳凱詠,Kiri T,Moon Tang,李芯駖,陳康堤,盧慧敏,許軼,鹽焗雞,黃妍,鄧小巧`,
+      g:`MIRROR,COLLAR,ERROR,The Hertz,Rover,IdG Bubbles,晚安莉莉,Honey Punch`},
+  cn:{m:`蔡徐坤,毛不易,劉宇寧,許鈞,鄧佳鑫,張峻豪,伯遠,劉宇,肖戰,王子異,丁程鑫,馬嘉祺,劉耀文,宋亞軒`,
+      f:`單依純,黃霄雲,劉雨昕,劉柏辛,喻言,孟美岐,吳宣儀,楊超越,趙粵,王菊`,
+      g:`時代少年團,火箭少女101,THE9,硬糖少女303,NINE PERCENT,摩登兄弟,WayV`},
+  tw:{m:`持修,高爾宣,莫宰羊,熊仔,黃偉晉,鄒序,王ADEN,someshiit 山姆,陳零九,楊士弘,吳卓源`,
+      f:`9m88,孫盛希,蘇運瑩,袁婭維,米莎 Misa,渣泥 ZANI,家家,鄭宜農`,
+      g:`告五人,美秀集團,理想混蛋,麋先生,五堅情,草東沒有派對,傻子與白痴,大象體操,露波合唱團,怕胖團`},
+  jp:{m:`Vaundy,藤井風,優里,imase,瑛人,崎山蒼志,Tani Yuuki,菅田將暉,秋山黄色`,
+      f:`Ado,幾田りら,tuki.,milet,iri,TOMOO,ano,ちゃんみな,和ぬか`,
+      g:`YOASOBI,Official髭男dism,King Gnu,Creepy Nuts,Snow Man,INI,BE:FIRST,NiziU,JO1,Number_i,SixTONES,なにわ男子,櫻坂46,日向坂46,ME:I,XG,Chilli Beans.,HANA,FRUITS ZIPPER,Travis Japan`},
+  kr:{m:`임영웅,정동원,이찬원,이무진,강다니엘,WOODZ,김호중,박지현,김용빈,정승환,김재환,박지훈,이승윤,조째즈,정세운,하성운,옹성우,김우석`,
+      f:`청하,BIBI,이영지,한로로,케이시,최예나,권은비,김세정,송가인,양지은,전소미,안예은,이채연,조유리,김다현`,
+      g:`Stray Kids,ATEEZ,TOMORROW X TOGETHER,ENHYPEN,ZEROBASEONE,RIIZE,BOYNEXTDOOR,TWS,aespa,IVE,NewJeans,LE SSERAFIM,(G)I-DLE,ITZY,NMIXX,ILLIT,BABYMONSTER,KISS OF LIFE,STAYC,TREASURE`},
+  us:{m:`Benson Boone,Shaboozey,Alex Warren,Noah Kahan,Zach Bryan,Lil Nas X,Teddy Swims,Riley Green,sombr,Dominic Fike,Lil Baby,Gunna,Jack Harlow,Stephen Sanchez,Bad Bunny,Kane Brown,Jordan Davis,Tommy Richman`,
+      f:`Olivia Rodrigo,Chappell Roan,Tate McRae,Gracie Abrams,Reneé Rapp,Ice Spice,Megan Thee Stallion,Cardi B,Lainey Wilson,Megan Moroney,Ella Langley,Summer Walker,Camila Cabello,Normani,Laufey,Tyla,Doechii,Gigi Perez`,
+      g:`HUNTR/X,KATSEYE,Why Don't We,PRETTYMUCH,Greta Van Fleet,boygenius,Wallows,The Marías`},
+  eu:{m:`Lewis Capaldi,Harry Styles,Central Cee,Dave,Sam Fender,Myles Smith,Louis Tomlinson,Niall Horan,Dermot Kennedy,Tom Grennan,Calum Scott,Aitch,Mahmood,Blanco,Sfera Ebbasta,Ultimo,Cian Ducrot,Benjamin Ingrosso`,
+      f:`Lola Young,Rosalía,Angèle,Mimi Webb,Olivia Dean,Griff,Sigrid,Jorja Smith,Mabel,Rina Sawayama,beabadoobee,Holly Humberstone`,
+      g:`Måneskin,Fontaines D.C.,Wet Leg,Blossoms,Sea Girls,Sports Team,The Last Dinner Party,Sleep Token,Easy Life`}
 };
 const CLASSIC = {   // 歌手|歌名;…（KTV 常點經典，每區 30～40 首）
   hk:`陳奕迅|十年;陳奕迅|富士山下;陳奕迅|K歌之王;陳奕迅|淘汰;陳奕迅|浮誇;陳奕迅|愛情轉移;陳奕迅|好久不見;Beyond|海闊天空;Beyond|光輝歲月;Beyond|真的愛你;張學友|吻別;張學友|祝福;張學友|李香蘭;張國榮|風繼續吹;張國榮|沉默是金;譚詠麟|朋友;譚詠麟|愛在深秋;譚詠麟|講不出再見;陳慧嫻|千千闕歌;王菲|容易受傷的女人;王菲|紅豆;古巨基|愛與誠;古巨基|情歌王;林子祥|分分鐘需要你;草蜢|失戀陣線聯盟;Twins|下一站天后;許冠傑|半斤八兩;鄭秀文|終身美麗;楊千嬅|少女的祈禱;楊千嬅|處處吻;容祖兒|心淡;劉德華|忘情水;劉德華|冰雨;黎明|今夜你會不會來;梅艷芳|床前明月光;梅艷芳|女人花;李克勤|紅日;周柏豪|傳聞`,
@@ -713,7 +749,11 @@ const ytNew = async (region,R) => {
 async function exploreData(region,cat,onMiss,sort){
   const R = REGIONS[region]; if(!R) throw new Error('未知的地區');
   if(!CATS.some(c=>c[0]===cat)) throw new Error('未知的分類');
-  if(['m','f','g'].includes(cat)) return {type:'artists',items:ART[region][cat].split(','),note:''};
+  if(['m','f','g'].includes(cat)){
+    const young = ((YOUNG[region]||{})[cat]||'').split(',').filter(Boolean), seen = new Set(young.map(x=>x.toLowerCase()));
+    const rest = ART[region][cat].split(',').filter(x=>!seen.has(x.toLowerCase()));
+    return {type:'artists',items:[...young,...rest],young:young.length,note:'🌱 = 出道 10 年內（2016 年之後）的新生代；其餘是經典與資深歌手。點歌手名字，就會列出他的伴奏版。'};
+  }
   if(cat==='classic') return {type:'songs',note:'KTV 常見經典歌曲；點歌時會自動找伴奏版。',
     items:CLASSIC[region].split(';').map(x=>{ const [a,t]=x.split('|'); return {title:t,channel:a,q:a+' '+t}; })};
   let items = null, note = '';
@@ -736,7 +776,7 @@ async function pickKaraoke(q,singerOverride,onMiss){
   return best;
 }
 
-let exRegion = store.get('kreg','tw'), exCat = 'hot', exItems = [], exSeq = 0;
+let exRegion = store.get('kreg','tw'), exCat = 'm', exItems = [], exSeq = 0;
 if(!REGIONS[exRegion]) exRegion = 'tw';
 function exChips(){
   $('regChips').innerHTML = Object.entries(REGIONS).map(([k,r])=>`<button class="chip ${k===exRegion?'on':''}" onclick="exSet('${k}',null)">${r.n}</button>`).join('');
@@ -759,7 +799,7 @@ async function exLoad(){
     if(my!==exSeq) return;
     exItems = d.items; $('exNote').textContent = d.note || '';
     box.innerHTML = d.type==='artists'
-      ? '<li style="display:block;border:0">' + d.items.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${esc(n)}</button>`).join('') + '</li>'
+      ? '<li style="display:block;border:0">' + d.items.map((n,i)=>`<button class="chip" onclick="exArtist(${i})">${i<(d.young||0)?'🌱 ':''}${esc(n)}</button>`).join('') + '</li>'
       : (d.items.map(exItemHTML).join('') || '<li class="empty">沒有資料</li>');
   }catch(e){ if(my===exSeq) box.innerHTML = '<li class="empty">載入失敗：'+esc(e.message)+'</li>'; }
 }
@@ -852,7 +892,7 @@ async function onPhoneData(conn,d){
     }
     else if(d.t==='explore'){
       const r = await exploreData(String(d.region||''),String(d.cat||''),miss,d.sort==='new'?'new':'views');
-      conn.send({t:'explored',rid:d.rid,type:r.type,note:r.note||'',
+      conn.send({t:'explored',rid:d.rid,type:r.type,note:r.note||'',young:r.young||0,
         items:r.items.map(v=>typeof v==='string' ? v : {title:v.title,channel:v.channel,thumb:v.thumb,q:v.q,views:v.views,published:v.published})});
     }
     else if(d.t==='pick'){
