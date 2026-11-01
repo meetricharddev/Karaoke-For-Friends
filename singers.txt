@@ -1,0 +1,108 @@
+卡拉OK點歌機 — 歌手名單（依人氣整理）
+更新：2026-10-29
+
+「🌱 新生代」＝出道 10 年內（約 2016 年之後）的人氣歌手／團體，在程式裡會排在最前面並加上 🌱。
+其後是經典與資深歌手。
+
+資料來源與可靠度：
+- 香港：新生代參考 2025 年叱咤樂壇、新城勁爆、Chill Club 頒獎禮的入圍／得獎名單與歌手人氣報導。
+- 台灣：新生代參考金曲獎（第 31～36 屆）新人與入圍名單、2025 年網友票選最愛華語團體。
+- 中國大陸：新生代參考騰訊音樂榜 2025 年度十大歌手、網易雲音樂 2025 年度音樂獎與《歌手 2025》。
+- 韓國：參考韓國企業評判研究所 2025 年歌手／男團／女團品牌評判榜，新生代依出道年份整理。
+- 日本、美國：參考 Oricon 2025 年間榜、Billboard 2025 年終榜，新生代依我的整理（出道年份未逐一查證）。
+- 歐洲：主要依我的整理。
+- 有些地區（尤其是團體、台灣／香港女歌手）找得到的新生代不足 20 位，我寧缺勿濫，沒有硬湊；歡迎你補充或指正。
+- 華語歌手以最常被歸類的地區為準（例如新加坡、馬來西亞出身但在台灣發展的歌手放在台灣）。
+- 歐洲名單已移除純 DJ（Avicii、Alan Walker、Kygo、Robin Schulz、Martin Garrix），改放歌手。
+
+==== 🇭🇰 香港 ====
+男歌手（🌱新生代 16 ＋ 經典資深 27）
+🌱 姜濤、盧瀚霆、陳卓賢、呂爵安、柳應廷、魏浚笙、MC張天賦、林家謙、Tyson Yoshi、湯令山、陳健安、洪嘉豪、張馳豪、Regent、郭澧羲、Edwin Tong
+其他：陳奕迅、張學友、譚詠麟、古巨基、許冠傑、林子祥、張國榮、黎明、劉德華、周柏豪、側田、張敬軒、林峯、李克勤、郭富城、陳小春、謝霆鋒、鄭中基、張智霖、許志安、陳百強、羅文、梁漢文、周國賢、陳柏宇、方力申、陳曉東
+
+女歌手（🌱新生代 11 ＋ 經典資深 27）
+🌱 姚焯菲、陳凱詠、Kiri T、Moon Tang、李芯駖、陳康堤、盧慧敏、許軼、鹽焗雞、黃妍、鄧小巧
+其他：王菲、容祖兒、鄧紫棋、楊千嬅、陳慧嫻、梅艷芳、衛蘭、何韻詩、薛凱琪、林憶蓮、關淑怡、鄭秀文、陳慧琳、李玟、莫文蔚、彭羚、林欣彤、吳雨霏、謝安琪、李幸倪、陳潔儀、梁詠琪、周慧敏、葉蒨文、蔡卓妍、鍾欣潼、方皓玟
+
+團體（🌱新生代 8 ＋ 經典資深 15）
+🌱 MIRROR、COLLAR、ERROR、The Hertz、Rover、IdG Bubbles、晚安莉莉、Honey Punch
+其他：Beyond、草蜢、Twins、Softhard、達明一派、Rubberband、Shine、太極、溫拿樂隊、Dear Jane、at17、Boy'z、農夫、風火海、Cookies
+
+==== 🇨🇳 中國大陸 ====
+男歌手（🌱新生代 14 ＋ 經典資深 26）
+🌱 蔡徐坤、毛不易、劉宇寧、許鈞、鄧佳鑫、張峻豪、伯遠、劉宇、肖戰、王子異、丁程鑫、馬嘉祺、劉耀文、宋亞軒
+其他：薛之謙、周深、汪峰、趙雷、李榮浩、許嵩、華晨宇、張傑、朴樹、陳楚生、胡彥斌、李健、刀郎、鄭鈞、崔健、老狼、孫楠、韓磊、騰格爾、楊坤、王源、易烊千璽、汪蘇瀧、張遠、隔壁老樊、李玉剛
+
+女歌手（🌱新生代 10 ＋ 經典資深 21）
+🌱 單依純、黃霄雲、劉雨昕、劉柏辛、喻言、孟美岐、吳宣儀、楊超越、趙粵、王菊
+其他：那英、張靚穎、李宇春、譚維維、韓紅、田震、郁可唯、張碧晨、劉惜君、陳粒、毛阿敏、周筆暢、尚雯婕、吉克雋逸、曲婉婷、王菲、宋祖英、龔琳娜、黃綺珊、楊鈺瑩、鞠婧祎
+
+團體（🌱新生代 7 ＋ 經典資深 19）
+🌱 時代少年團、火箭少女101、THE9、硬糖少女303、NINE PERCENT、摩登兄弟、WayV
+其他：鳳凰傳奇、筷子兄弟、逃跑計劃、新褲子、水木年華、羽泉、TFBOYS、痛仰樂隊、二手玫瑰、五條人、萬能青年旅店、房東的貓、花兒樂隊、後海大鞠躬、超載樂隊、唐朝樂隊、黑豹樂隊、零點樂隊、SNH48
+
+==== 🇹🇼 台灣 ====
+男歌手（🌱新生代 11 ＋ 經典資深 30）
+🌱 持修、高爾宣、莫宰羊、熊仔、黃偉晉、鄒序、王ADEN、someshiit 山姆、陳零九、楊士弘、吳卓源
+其他：周杰倫、林俊傑、陶喆、蕭敬騰、王力宏、周傳雄、李聖傑、羅志祥、盧廣仲、韋禮安、張信哲、品冠、周興哲、吳青峰、林宥嘉、張震嶽、伍佰、李宗盛、羅大佑、陳昇、黃品源、周華健、齊秦、費玉清、張宇、光良、楊宗緯、方大同、范逸臣、蔡旻佑
+
+女歌手（🌱新生代 8 ＋ 經典資深 30）
+🌱 9m88、孫盛希、蘇運瑩、袁婭維、米莎 Misa、渣泥 ZANI、家家、鄭宜農
+其他：鄧麗君、蔡依林、張惠妹、田馥甄、孫燕姿、梁靜茹、王心凌、徐佳瑩、陳綺貞、戴佩妮、楊丞琳、劉若英、蔡健雅、張韶涵、范瑋琪、艾怡良、張清芳、黃小琥、江蕙、蔡琴、彭佳慧、魏如萱、李佳薇、梁文音、曾沛慈、萬芳、陳淑樺、楊乃文、郭靜、順子
+
+團體（🌱新生代 10 ＋ 經典資深 23）
+🌱 告五人、美秀集團、理想混蛋、麋先生、五堅情、草東沒有派對、傻子與白痴、大象體操、露波合唱團、怕胖團
+其他：五月天、蘇打綠、S.H.E、F.I.R.飛兒樂團、動力火車、信樂團、八三夭、玖壹壹、滅火器、茄子蛋、小虎隊、飛輪海、南拳媽媽、無印良品、Tizzy Bac、拍謝少年、宇宙人、閃靈、傷心欲絕、Energy、By2、Lollipop F、MP魔幻力量
+
+==== 🇯🇵 日本 ====
+男歌手（🌱新生代 9 ＋ 經典資深 25）
+🌱 Vaundy、藤井風、優里、imase、瑛人、崎山蒼志、Tani Yuuki、菅田將暉、秋山黄色
+其他：米津玄師、星野源、福山雅治、山下達郎、桑田佳祐、玉置浩二、久保田利伸、平井堅、槇原敬之、秦基博、小田和正、清水翔太、三浦大知、浜田省吾、稲葉浩志、長渕剛、斉藤和義、森山直太朗、Eve、尾崎豊、さだまさし、井上陽水、山崎まさよし、吉田拓郎、氷川きよし
+
+女歌手（🌱新生代 9 ＋ 經典資深 28）
+🌱 Ado、幾田りら、tuki.、milet、iri、TOMOO、ano、ちゃんみな、和ぬか
+其他：あいみょん、宇多田ヒカル、中島みゆき、安室奈美恵、浜崎あゆみ、椎名林檎、LiSA、松任谷由実、倖田來未、大塚愛、絢香、中島美嘉、家入レオ、aiko、一青窈、平原綾香、JUJU、西野カナ、藍井エイル、Aimer、YUKI、竹内まりや、松田聖子、中森明菜、坂本冬美、石川さゆり、山口百恵、森高千里
+
+團體（🌱新生代 20 ＋ 經典資深 21）
+🌱 YOASOBI、Official髭男dism、King Gnu、Creepy Nuts、Snow Man、INI、BE:FIRST、NiziU、JO1、Number_i、SixTONES、なにわ男子、櫻坂46、日向坂46、ME:I、XG、Chilli Beans.、HANA、FRUITS ZIPPER、Travis Japan
+其他：Mrs. GREEN APPLE、back number、RADWIMPS、Mr.Children、B'z、サザンオールスターズ、SMAP、嵐、Perfume、ONE OK ROCK、乃木坂46、King & Prince、ゆず、スピッツ、ヨルシカ、BUMP OF CHICKEN、L'Arc〜en〜Ciel、GLAY、X JAPAN、ZARD、ASIAN KUNG-FU GENERATION
+
+==== 🇰🇷 韓國 ====
+男歌手（🌱新生代 18 ＋ 經典資深 20）
+🌱 임영웅、정동원、이찬원、이무진、강다니엘、WOODZ、김호중、박지현、김용빈、정승환、김재환、박지훈、이승윤、조째즈、정세운、하성운、옹성우、김우석
+其他：조용필、박서진、영탁、성시경、장민호、카더가든、환희、나훈아、김희재、PSY、G-DRAGON、박진영、이승철、김범수、박효신、10CM、폴킴、이문세、김종국、TAEYANG
+
+女歌手（🌱新生代 15 ＋ 經典資深 25）
+🌱 청하、BIBI、이영지、한로로、케이시、최예나、권은비、김세정、송가인、양지은、전소미、안예은、이채연、조유리、김다현
+其他：IU、TAEYEON、화사、백예린、장윤정、현아、선미、에일리、박정현、거미、이하이、헤이즈、BoA、이효리、JOY、JENNIE、ROSÉ、LISA、JISOO、SOYOU、이선희、윤하、김완선、백아연、이소라
+
+團體（🌱新生代 20 ＋ 經典資深 17）
+🌱 Stray Kids、ATEEZ、TOMORROW X TOGETHER、ENHYPEN、ZEROBASEONE、RIIZE、BOYNEXTDOOR、TWS、aespa、IVE、NewJeans、LE SSERAFIM、(G)I-DLE、ITZY、NMIXX、ILLIT、BABYMONSTER、KISS OF LIFE、STAYC、TREASURE
+其他：BTS、BLACKPINK、SEVENTEEN、TWICE、Red Velvet、EXO、BIGBANG、SHINee、Super Junior、NCT、Girls' Generation、DAY6、MAMAMOO、Apink、OH MY GIRL、2PM、MONSTA X
+
+==== 🇺🇸 美國 ====
+男歌手（🌱新生代 18 ＋ 經典資深 24）
+🌱 Benson Boone、Shaboozey、Alex Warren、Noah Kahan、Zach Bryan、Lil Nas X、Teddy Swims、Riley Green、sombr、Dominic Fike、Lil Baby、Gunna、Jack Harlow、Stephen Sanchez、Bad Bunny、Kane Brown、Jordan Davis、Tommy Richman
+其他：Morgan Wallen、Bruno Mars、The Weeknd、Kendrick Lamar、Post Malone、Drake、Justin Bieber、Eminem、Luke Combs、Chris Stapleton、Justin Timberlake、Usher、Michael Jackson、Elvis Presley、Frank Sinatra、John Legend、Travis Scott、Tyler The Creator、Jelly Roll、Jason Aldean、Kenny Chesney、Chris Brown、Johnny Cash、Garth Brooks
+
+女歌手（🌱新生代 18 ＋ 經典資深 27）
+🌱 Olivia Rodrigo、Chappell Roan、Tate McRae、Gracie Abrams、Reneé Rapp、Ice Spice、Megan Thee Stallion、Cardi B、Lainey Wilson、Megan Moroney、Ella Langley、Summer Walker、Camila Cabello、Normani、Laufey、Tyla、Doechii、Gigi Perez
+其他：Taylor Swift、Sabrina Carpenter、Lady Gaga、Billie Eilish、Ariana Grande、Beyoncé、SZA、Doja Cat、Miley Cyrus、Katy Perry、Rihanna、Whitney Houston、Mariah Carey、Madonna、Britney Spears、Christina Aguilera、Selena Gomez、Lana Del Rey、Kelly Clarkson、P!nk、Alicia Keys、Celine Dion、Cher、Cyndi Lauper、Shania Twain、Carrie Underwood、Demi Lovato
+
+團體（🌱新生代 8 ＋ 經典資深 29）
+🌱 HUNTR/X、KATSEYE、Why Don't We、PRETTYMUCH、Greta Van Fleet、boygenius、Wallows、The Marías
+其他：Maroon 5、Imagine Dragons、Twenty One Pilots、Linkin Park、Green Day、Journey、Eagles、Bon Jovi、Fleetwood Mac、Foo Fighters、Red Hot Chili Peppers、Nirvana、Guns N' Roses、Metallica、Backstreet Boys、NSYNC、Destiny's Child、Jonas Brothers、OneRepublic、The Killers、Panic! at the Disco、My Chemical Romance、Paramore、Boyz II Men、Earth Wind & Fire、The Beach Boys、Fall Out Boy、Fifth Harmony、Kings of Leon
+
+==== 🇪🇺 歐洲 ====
+男歌手（🌱新生代 18 ＋ 經典資深 25）
+🌱 Lewis Capaldi、Harry Styles、Central Cee、Dave、Sam Fender、Myles Smith、Louis Tomlinson、Niall Horan、Dermot Kennedy、Tom Grennan、Calum Scott、Aitch、Mahmood、Blanco、Sfera Ebbasta、Ultimo、Cian Ducrot、Benjamin Ingrosso
+其他：Ed Sheeran、Sam Smith、Elton John、George Michael、Robbie Williams、Rod Stewart、Sting、Phil Collins、Calvin Harris、David Guetta、Zayn、Liam Gallagher、James Arthur、Passenger、Rag'n'Bone Man、Olly Murs、George Ezra、Stormzy、Mika、James Blunt、Hozier、Craig David、Jamie Cullum、Paolo Nutini、Tom Odell
+
+女歌手（🌱新生代 12 ＋ 經典資深 27）
+🌱 Lola Young、Rosalía、Angèle、Mimi Webb、Olivia Dean、Griff、Sigrid、Jorja Smith、Mabel、Rina Sawayama、beabadoobee、Holly Humberstone
+其他：Adele、Dua Lipa、Amy Winehouse、Ellie Goulding、Jessie J、Rita Ora、Annie Lennox、Anne-Marie、Dido、Lily Allen、Charli XCX、RAYE、Sade、Duffy、Paloma Faith、Kate Bush、Zara Larsson、Tove Lo、Robyn、Loreen、Helene Fischer、Nena、Mylène Farmer、Zaz、Aya Nakamura、Jessie Ware、Birdy
+
+團體（🌱新生代 9 ＋ 經典資深 32）
+🌱 Måneskin、Fontaines D.C.、Wet Leg、Blossoms、Sea Girls、Sports Team、The Last Dinner Party、Sleep Token、Easy Life
+其他：Coldplay、Queen、The Beatles、ABBA、Oasis、The Rolling Stones、Take That、Spice Girls、Westlife、a-ha、Roxette、U2、Rammstein、Depeche Mode、Pink Floyd、Led Zeppelin、Radiohead、Arctic Monkeys、Muse、Little Mix、One Direction、JLS、Blur、The Cure、Genesis、Bee Gees、Wham!、Duran Duran、Florence + The Machine、The 1975、Years & Years、Bastille
+

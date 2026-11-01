@@ -86,16 +86,15 @@ code{background:#0006;padding:1px 5px;border-radius:4px}
 #stage:fullscreen #fsbar{display:flex}
 footer{max-width:1500px;margin:8px auto 24px;padding:0 16px;font-size:12px;color:#a99bc9;line-height:1.7}
 footer a{color:#d6b8ff}
-#adBreak{display:none;gap:16px;align-items:center;padding:12px 16px;flex-wrap:wrap;background:#241a3a}
-#adBreak .abMain{flex:1;min-width:240px;text-align:center}
-#adBreak .abSide{display:flex;flex-direction:column;align-items:center;gap:6px}
-#adBreak .abCnt{font-size:40px;font-weight:800;line-height:1}
-#adBreak .house{background:#2c2342;border-radius:8px;padding:16px;line-height:1.9}
 #planModal{display:none;position:fixed;inset:0;background:#000a;z-index:100;align-items:center;justify-content:center}
 #planModal.show{display:flex}
 .pbox{background:#211a33;border-radius:14px;padding:18px;max-width:440px;width:92%}
 .pbox input{margin:8px 0}
 a.btn{display:inline-block;text-decoration:none}
+#gate{display:none;position:fixed;inset:0;z-index:90;background:radial-gradient(circle at center,#3b1470,#0b0716);align-items:center;justify-content:center;text-align:center;padding:20px}
+#gate .gtitle{font-size:clamp(22px,4vw,40px);font-weight:700}
+#gate .gtext{margin:14px 0;font-size:clamp(15px,2.2vw,22px);line-height:1.8;color:#d6b8ff}
+#gate .gcnt{font-size:clamp(70px,16vw,200px);font-weight:800;line-height:1.1;margin:8px 0 18px}
 </style>
 </head>
 <body>
@@ -116,7 +115,14 @@ a.btn{display:inline-block;text-decoration:none}
     <input type="password" id="apikey" placeholder="貼上你的 API 金鑰（AIza…）">
     <button class="btn" onclick="saveKey()">儲存</button>
   </div>
-  <small>金鑰只會儲存在這台電腦的瀏覽器／App 裡，只需輸入一次，不會上傳到任何地方。到 Google Cloud Console 啟用「YouTube Data API v3」即可免費取得；每次搜尋約耗 200 配額單位（每日 10,000），約可搜尋 50 次。</small>
+  <small>金鑰只會儲存在這台電腦的瀏覽器／App 裡，只需輸入一次，不會上傳到任何地方。取得方式（免費、約 5 分鐘）：</small>
+  <ol style="margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.9;color:#d6b8ff">
+    <li>用 Google 帳號登入，<a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener" style="color:#ffc933">建立專案</a>（名稱隨便填；已有專案可略過）</li>
+    <li>打開 <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener" style="color:#ffc933">YouTube Data API v3</a>，按藍色「啟用」</li>
+    <li>打開 <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:#ffc933">憑證頁面</a>，按「建立憑證」→「API 金鑰」，複製以 AIza 開頭的金鑰，貼到上面的欄位</li>
+    <li>（建議）點進該金鑰 →「API 限制」→「限制金鑰」→ 只勾「YouTube Data API v3」→ 儲存</li>
+  </ol>
+  <small style="display:block;margin-top:6px">每次搜尋約耗 200 額度單位，免費額度每天 10,000，約可搜尋 50 次；<a href="https://console.cloud.google.com/apis/api/youtube.googleapis.com/quotas" target="_blank" rel="noopener" style="color:#ffc933">查看用量</a>。</small>
 </div>
 
 <main>
@@ -140,7 +146,6 @@ a.btn{display:inline-block;text-decoration:none}
             </div>
             <div id="interQR"><div id="qr2"></div><span>📱 掃碼點歌</span></div>
           </div>
-          <div id="adBreak"></div>
           <div id="fsbar">
             <button class="btn alt" onclick="stepSpeed(-1)">🐢 慢</button>
             <button class="btn alt" onclick="stepSpeed(1)">🐇 快</button>
@@ -247,6 +252,12 @@ a.btn{display:inline-block;text-decoration:none}
     </div>
   </section>
 </main>
+<div id="gate"><div class="gbox">
+  <div class="gtitle">⏳ 免費試用已結束</div>
+  <div class="gtext">升級只要 <b id="gatePrice"></b>，就不用再等待。<br>不升級也可以繼續使用，只要每次開啟時先等一下：</div>
+  <div class="gcnt" id="gateCnt">10</div>
+  <div class="row" style="justify-content:center"><button class="btn" onclick="openPlan()">👑 升級，跳過等待</button></div>
+</div></div>
 <div id="planModal"><div class="pbox">
   <h2>👑 方案與升級</h2>
   <div id="planStatus" style="margin-bottom:8px"></div>
@@ -255,9 +266,10 @@ a.btn{display:inline-block;text-decoration:none}
   <div class="row"><button class="btn" onclick="activateCode()">啟用升級碼</button><a class="btn alt" id="planBuy" target="_blank" rel="noopener" style="display:none">購買升級碼</a><button class="btn alt" onclick="closePlan()">關閉</button></div>
   <div id="planMsg" style="margin-top:8px;font-size:13px"></div>
   <small id="planNote"></small>
-  <small style="display:block;margin-top:8px">你的裝置代碼：<code id="planDev"></code> <button class="btn alt" style="padding:2px 8px" onclick="copyDev()">複製</button><br>升級碼只能在產生後 24 小時內輸入；成功啟用後，這台裝置永久免廣告。更換裝置或清除瀏覽器資料後，請聯絡開發者並提供裝置代碼。</small>
+  <small style="display:block;margin-top:8px">你的裝置代碼：<code id="planDev"></code> <button class="btn alt" style="padding:2px 8px" onclick="copyDev()">複製</button><br>升級碼只能在產生後 24 小時內輸入；成功啟用後，這台裝置永久不用等待。更換裝置或清除瀏覽器資料後，請聯絡開發者並提供裝置代碼。</small>
 </div></div>
 <footer>
+  ⌨ 快捷鍵：<b>N</b>（或 →）切歌 ・ <b>R</b> 重唱 ・ <b>空白鍵</b> 暫停／播放 ・ <b>F</b> 全螢幕 ・ <b>[</b> 變慢 ・ <b>]</b> 變快（請先點一下頁面空白處，不要停在 YouTube 影片上）<br>
   <a href="privacy.html">隱私權政策</a> ・ <a href="terms.html">服務條款</a><br>
   本程式使用 YouTube API 服務；使用本程式即表示你同意
   <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 服務條款</a>，
@@ -265,7 +277,7 @@ a.btn{display:inline-block;text-decoration:none}
   本程式與 YouTube、Google 無隸屬或背書關係。
 </footer>
 <div id="toast"></div>
-<script src="ads.js"></script>
+<script src="plan.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const store = {
@@ -495,22 +507,16 @@ function skipNext(){
 }
 
 /* ---------- 播放 ---------- */
-let sinceBreak = ((window.KARAOKE_CONFIG||{}).ads||{}).atStart===false ? 0 : 999, inBreak = false;   // 免費版：開始時與每 N 首出現一次廣告
 function playNext(){
-  if(inBreak) return;
+  if(window.planGateActive) return;   // 等待畫面還在時先不播放
   hideInter();
   if(!ready) return;
-  if(queue.length && typeof adBreakDue==='function' && adBreakDue(sinceBreak)){
-    inBreak = true; try{player.stopVideo()}catch(e){}
-    startAdBreak(()=>{ inBreak = false; sinceBreak = 0; playNext(); });
-    return;
-  }
   if(queue.length){
     current = queue.shift(); reg[current.id] = current;
     persist(); addHist(current);
     player.loadVideoById(current.id);
     if(!$('keepspd').checked) speed = 1;
-    showSpeed(); pendingSpeed = true; sinceBreak++;
+    showSpeed(); pendingSpeed = true;
   } else {
     current = null; try{player.stopVideo()}catch(e){}
   }
@@ -531,7 +537,7 @@ window.onYouTubeIframeAPIReady = function(){
         if(e.data===YT.PlayerState.PLAYING) requestWake();
         if(e.data===YT.PlayerState.PLAYING && pendingSpeed){ pendingSpeed=false; try{player.setPlaybackRate(speed)}catch(err){} }
         if(e.data===YT.PlayerState.ENDED){
-          if(queue.length && +$('cdsec').value>0 && !(typeof adBreakDue==='function' && adBreakDue(sinceBreak))) startCountdown(); else playNext();
+          if(queue.length && +$('cdsec').value>0) startCountdown(); else playNext();
         }
       },
       onError:e=>{
@@ -602,6 +608,24 @@ function stepSpeed(d){
   i = Math.min(rates.length-1, Math.max(0, i+d));
   setSpeed(rates[i]);
 }
+
+/* ---------- 快捷鍵（游標不在輸入框、也不在 YouTube 影片裡時有效） ---------- */
+function togglePause(){ if(!ready||!current) return; try{ player.getPlayerState()===1 ? player.pauseVideo() : player.playVideo(); }catch(e){} }
+document.addEventListener('plangate-done',()=>{ if(ready && queue.length && !current) playNext(); });
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey||window.planGateActive) return;
+  const t = e.target, tag = ((t&&t.tagName)||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable)) return;
+  if($('planModal').classList.contains('show')) return;
+  const k = e.key.length===1 ? e.key.toLowerCase() : e.key;
+  if(tag==='button' && (k===' '||k==='Enter')) return;
+  if(k==='n'||k==='ArrowRight'){ e.preventDefault(); if(current||queue.length){ playNext(); flash('⏭ 切歌'); } }
+  else if(k==='r'){ replay(); flash('🔁 重唱'); }
+  else if(k===' '||k==='k'){ e.preventDefault(); togglePause(); }
+  else if(k==='f'){ toggleFS(); }
+  else if(k==='['){ stepSpeed(-1); }
+  else if(k===']'){ stepSpeed(1); }
+});
 
 /* ---------- 貼連結 ---------- */
 async function addUrl(){
@@ -950,7 +974,7 @@ if(location.protocol === 'file:'){
   const w = $('warn'); w.style.display='block';
   w.innerHTML = '⚠ 目前是直接用檔案開啟，YouTube 可能拒絕嵌入播放（錯誤 153），手機點歌也無法使用。請依 README 把本程式放到網站（例如 GitHub Pages）後，用網址開啟。';
 }
-pruneOld(); renderChips(); setTab('explore'); refreshLists(); initRemote(); exChips(); exLoad(); refreshFavs(); initAds();
+pruneOld(); renderChips(); setTab('explore'); refreshLists(); initRemote(); exChips(); exLoad(); refreshFavs(); if(typeof initPlan==='function') initPlan();
 </script>
 </body>
 </html>

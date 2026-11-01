@@ -8,16 +8,12 @@ window.KARAOKE_CONFIG = {
   // 搜尋結果最低觀看次數
   minViews: 100000,
 
-  // 免費試用天數（試用期內免廣告）
+  // 免費試用天數。試用結束後，每次開啟程式都會先出現「等待畫面」，升級後就不會再出現
   trialDays: 7,
-
-  // 廣告（只在「免費版」＝試用結束且尚未升級時出現）
-  //   mode: 'off'（不顯示）｜'house'（自家廣告：推廣升級，最簡單，不需審核）｜'adsense'（Google AdSense 廣告）
-  //   seconds: 每次廣告時間（秒）　everySongs: 每唱幾首出現一次　atStart: 開始使用時先出現一次
-  ads: { mode: 'house', seconds: 10, everySongs: 5, atStart: true, adsenseClient: '', adsenseSlot: '' },
+  gateSeconds: 10,
 
   // 升級價格的顯示文字，以及網頁版購買連結（例如 Stripe Payment Link / Lemon Squeezy / Ko-fi 商品頁）
-  priceText: 'US$2.99 一次付費・永久免廣告',
+  priceText: 'US$2.99 一次付費・永久不用等待',
   checkoutUrl: '',
 
   // 上架版（Google Play / App Store 打包）請設為 true：不顯示外部購買連結（商店規定要用商店內購買）
