@@ -232,7 +232,7 @@ a.btn{display:inline-block;text-decoration:none}
           <input type="text" id="q" placeholder="輸入歌名或歌手，例如：周杰倫 晴天" onkeydown="if(event.key==='Enter')search()">
           <button class="btn" onclick="search()">搜尋</button>
         </div>
-        <small>順序：🎤 伴奏MV（無人聲＋字幕）→ 📝 歌詞版 → 其他；只列 10 萬次觀看以上</small>
+        <small>順序：🎤 伴奏MV（無人聲＋字幕）→ 📝 歌詞版 → 其他；只列 10 萬次觀看以上。從「日本」探索進來的搜尋，改為優先ひらがな／ローマ字歌詞、門檻 4,000 次。</small>
         <div class="row" style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
         <ul class="list" id="results" style="margin-top:8px"><li class="empty">輸入關鍵字開始找歌</li></ul>
       </div>
@@ -305,6 +305,20 @@ function rank(title){
   return 3;
 }
 const BADGE = {1:['🎤 伴奏MV','b1'],2:['📝 歌詞版','b2'],3:['其他','b3']};
+// 日本模式：優先顯示 ひらがな／ローマ字（羅馬拼音）歌詞的版本
+const BADGE_JP = {1:['🎤 伴奏＋ひらがな/ローマ字','b1'],2:['🔤 ひらがな/ローマ字歌詞','b2'],3:['🎤 伴奏MV','b1'],4:['📝 歌詞版','b2'],5:['其他','b3']};
+function rankJp(title){
+  const t = title.toLowerCase();
+  const roma = /ひらがな|ヒラガナ|平仮名|ふりがな|ローマ字|ろーまじ|romaji|rōmaji|hiragana|furigana|romaniz|ルビ/.test(t);
+  const kara = /karaoke|カラオケ|卡拉ok|卡拉 ok|ktv|伴奏|off ?vocal|instrumental|オフボーカル|無人聲|消音|backing track/.test(t);
+  const lyr = /歌詞|歌词|lyrics?|lyric video|字幕|歌詞付き/.test(t);
+  if(kara && roma) return 1;
+  if(roma) return 2;
+  if(kara) return 3;
+  if(lyr) return 4;
+  return 5;
+}
+const rankFor = (title,prof) => prof==='jp' ? rankJp(title) : rank(title);
 
 /* ---------- 搜尋 ---------- */
 const searchCache = new Map(Object.entries(store.get('kcache2',{})));   // 關鍵字 → 結果，6 小時內不重複扣額度（重開程式也保留）
@@ -312,7 +326,7 @@ function saveCache(){
   const ent = [...searchCache.entries()].sort((a,b)=>b[1].t-a[1].t).slice(0,40);
   store.set('kcache2',Object.fromEntries(ent));
 }
-let sortMode = store.get('ksort','views'), foundRaw = [];
+let sortMode = store.get('ksort','views'), foundRaw = [], foundProf = '';
 if(sortMode!=='new') sortMode = 'views';
 // 先依 🎤伴奏MV → 📝歌詞版 → 其他 分組；同一組內再依「最多觀看」或「最新上傳」排序
 function sortSongs(list,mode,grouped){
@@ -325,20 +339,24 @@ const metaOf = v => v.views ? ' · 👁 '+fmtViews(v.views)+' 次 · '+String(v.
 // light=true：只搜 1 次（伴奏版不足 3 支才補搜歌詞版）；否則搜 2 次。一律只保留 MIN_VIEWS 以上
 async function searchSongs(q,opts){
   opts = opts || {};
-  const k = (opts.light?'L:':'F:') + q.trim().toLowerCase(), c = searchCache.get(k);
+  const prof = opts.prof==='jp' ? 'jp' : '';
+  const k = (opts.light?'L:':'F:') + (prof?prof+':':'') + q.trim().toLowerCase(), c = searchCache.get(k);
   if(c && Date.now()-c.t < 6*3600e3) return c.v;
   if(opts.onMiss) opts.onMiss();
-  const ok = v => (+v.views||0) >= MIN_VIEWS;
+  const minV = prof==='jp' ? MIN_VIEWS_JP : MIN_VIEWS, ok = v => (+v.views||0) >= minV;
+  const q1 = prof==='jp' ? q + ' カラオケ ひらがな ローマ字 romaji 歌詞 字幕 karaoke' : q + ' 卡拉OK 伴奏 無人聲 字幕 karaoke';
+  const q2 = prof==='jp' ? q + ' ひらがな ローマ字 歌詞 romaji lyrics' : q + ' 歌詞版 lyrics';
+  const good = prof==='jp' ? (v=>rankJp(v.title)<=2) : (v=>rank(v.title)===1);
   let lists;
   if(opts.light){
-    const first = (await yt(q + ' 卡拉OK 伴奏 無人聲 字幕 karaoke')).filter(ok);
+    const first = (await yt(q1)).filter(ok);
     lists = [first];
-    if(first.filter(v=>rank(v.title)===1).length < 3) lists.push((await yt(q + ' 歌詞版 lyrics')).filter(ok));
+    if(first.filter(good).length < 3) lists.push((await yt(q2)).filter(ok));
   } else {
-    lists = (await Promise.all([ yt(q + ' 卡拉OK 伴奏 無人聲 字幕 karaoke'), yt(q + ' 歌詞版 lyrics') ])).map(l=>l.filter(ok));
+    lists = (await Promise.all([ yt(q1), yt(q2) ])).map(l=>l.filter(ok));
   }
   const seen = new Set(), all = [];
-  lists.flat().forEach(v=>{ if(!seen.has(v.id)){ seen.add(v.id); v.rank = rank(v.title); all.push(v);} });
+  lists.flat().forEach(v=>{ if(!seen.has(v.id)){ seen.add(v.id); v.rank = rankFor(v.title,prof); v.prof = prof; all.push(v);} });
   searchCache.set(k,{t:Date.now(),v:all}); saveCache();
   return all;
 }
@@ -348,13 +366,13 @@ function setSort(v){
   if(foundRaw.length){ found = sortSongs(foundRaw,sortMode); renderResults(); }
   exLoad();
 }
-async function search(light){
+async function search(light,prof){
   const q = $('q').value.trim(); if(!q) return;
   if(!PROXY && !getKey()){ $('settings').classList.add('show'); toast('請先設定 YouTube API 金鑰'); return; }
   setTab('search');
   $('results').innerHTML = '<li class="empty">搜尋中…</li>';
   try{
-    foundRaw = await searchSongs(q,{light:!!light}); found = sortSongs(foundRaw,sortMode);
+    foundProf = prof||''; foundRaw = await searchSongs(q,{light:!!light,prof:foundProf}); found = sortSongs(foundRaw,sortMode);
     renderResults();
   }catch(e){
     $('results').innerHTML = '<li class="empty">搜尋失敗：'+esc(e.message)+'</li>';
@@ -364,11 +382,11 @@ async function search(light){
 /* ---------- 歌曲清單（搜尋結果 / 最愛 / 紀錄共用） ---------- */
 function itemHTML(v){
   reg[v.id] = reg[v.id] || v;
-  const r = rank(v.title), f = isFav(v.id);
+  const bd = (v.prof==='jp'?BADGE_JP:BADGE)[v.rank||rank(v.title)] || BADGE[3], f = isFav(v.id);
   return `<li>
     <img src="${v.thumb||thumbOf(v.id)}" alt="">
     <div class="info">
-      <div class="t"><span class="badge ${BADGE[r][1]}">${BADGE[r][0]}</span>${esc(v.title)}</div>
+      <div class="t"><span class="badge ${bd[1]}">${bd[0]}</span>${esc(v.title)}</div>
       <div class="c">${esc(v.channel||'')}${metaOf(v)}</div>
     </div>
     <div class="acts">
@@ -378,7 +396,7 @@ function itemHTML(v){
     <button class="star ${f?'on':''}" onclick="toggleFav('${v.id}')">${f?'★':'☆'}</button>
   </li>`;
 }
-function renderResults(){ $('results').innerHTML = found.length ? found.map(itemHTML).join('') : '<li class="empty">找不到符合條件（10 萬次觀看以上）的結果</li>'; }
+function renderResults(){ $('results').innerHTML = found.length ? found.map(itemHTML).join('') : '<li class="empty">找不到符合條件（'+fmtViews(foundProf==='jp'?MIN_VIEWS_JP:MIN_VIEWS)+' 次觀看以上）的結果</li>'; }
 function renderFav(){ $('favlist').innerHTML = favs.length ? favs.map(itemHTML).join('') : '<li class="empty">還沒有收藏，按 ☆ 就能加入最愛</li>'; }
 function renderHist(){ $('histlist').innerHTML = hist.length ? hist.map(itemHTML).join('') : '<li class="empty">尚無播放紀錄</li>'; }
 function refreshLists(){ if(found.length) renderResults(); renderFav(); renderHist(); renderQueue(); }
@@ -651,6 +669,7 @@ const REGIONS = {
   us:{n:'🇺🇸 美國',chart:'US',lang:'en',kw:'official music video'},
   eu:{n:'🇪🇺 歐洲',chart:'GB',lang:'en',kw:'official music video',note:'歐洲以英國榜單為主。'}
 };
+const JP_NOTE = ' 🇯🇵 日本：搜尋會優先顯示ひらがな／ローマ字歌詞版，觀看門檻放寬到 4,000 次。';
 const CATS = [['m','👨 男歌手'],['f','👩 女歌手'],['g','👥 團體'],['classic','👑 KTV經典']];
 // 歌手名單：每個地區 × 男歌手／女歌手／團體，依人氣整理（韓國、日本、美國參考了公開榜單；其他地區主要憑整理，歡迎指正）
 const ART = {
@@ -728,6 +747,7 @@ async function cachedEx(key,ttl,fn,onMiss){
 const CFG = window.KARAOKE_CONFIG || {};
 const PROXY = (CFG.apiBase||'').replace(/\/+$/,'');          // 有設定 = 走代理伺服器，使用者不需要金鑰
 const MIN_VIEWS = CFG.minViews ?? 100000;                     // 搜尋結果最低觀看次數
+const MIN_VIEWS_JP = CFG.minViewsJp ?? 4000;                  // 日本歌手／歌曲：伴奏＋ひらがな/ローマ字 版本的觀看數少，門檻放寬
 async function proxyGet(path,params){
   const r = await fetch(PROXY+path+'?'+new URLSearchParams(params));
   let j = {}; try{ j = await r.json() }catch(e){}
@@ -776,9 +796,9 @@ async function exploreData(region,cat,onMiss,sort){
   if(['m','f','g'].includes(cat)){
     const young = ((YOUNG[region]||{})[cat]||'').split(',').filter(Boolean), seen = new Set(young.map(x=>x.toLowerCase()));
     const rest = ART[region][cat].split(',').filter(x=>!seen.has(x.toLowerCase()));
-    return {type:'artists',items:[...young,...rest],young:young.length,note:'🌱 = 出道 10 年內（2016 年之後）的新生代；其餘是經典與資深歌手。點歌手名字，就會列出他的伴奏版。'};
+    return {type:'artists',items:[...young,...rest],young:young.length,note:'🌱 = 出道 10 年內（2016 年之後）的新生代；其餘是經典與資深歌手。點歌手名字，就會列出他的伴奏版。'+(region==='jp'?JP_NOTE:'')};
   }
-  if(cat==='classic') return {type:'songs',note:'KTV 常見經典歌曲；點歌時會自動找伴奏版。',
+  if(cat==='classic') return {type:'songs',note:'KTV 常見經典歌曲；點歌時會自動找伴奏版。'+(region==='jp'?JP_NOTE:''),
     items:CLASSIC[region].split(';').map(x=>{ const [a,t]=x.split('|'); return {title:t,channel:a,q:a+' '+t}; })};
   let items = null, note = '';
   if(cat==='hot' && R.chart){
@@ -792,8 +812,8 @@ async function exploreData(region,cat,onMiss,sort){
   return {type:'songs',note,items:sortSongs(items.filter(v=>(+v.views||0)>=MIN_VIEWS),sort||sortMode,false).map(v=>({...v,q:cleanTitle(v.title)}))};
 }
 // 自動挑伴奏版：伴奏MV > 歌詞版 > 其他（結果已依此排序）
-async function pickKaraoke(q,singerOverride,onMiss){
-  const list = sortSongs(await searchSongs(q,{light:true,onMiss}),'views');
+async function pickKaraoke(q,singerOverride,onMiss,prof){
+  const list = sortSongs(await searchSongs(q,{light:true,onMiss,prof}),'views');
   if(!list.length) throw new Error('找不到「'+q+'」的伴奏版');
   const best = list[0];
   add(best,false,singerOverride);
@@ -829,10 +849,10 @@ async function exLoad(){
 }
 async function exPick(i){
   const v = exItems[i]; toast('尋找伴奏版中…');
-  try{ await pickKaraoke(v.q); }catch(e){ toast(e.message); }
+  try{ await pickKaraoke(v.q,undefined,undefined,exRegion==='jp'?'jp':''); }catch(e){ toast(e.message); }
 }
-function exVersions(i){ $('q').value = exItems[i].q; search(true); }
-function exArtist(i){ $('q').value = exItems[i]; search(true); }
+function exVersions(i){ $('q').value = exItems[i].q; search(true,exRegion==='jp'?'jp':''); }
+function exArtist(i){ $('q').value = exItems[i]; search(true,exRegion==='jp'?'jp':''); }
 
 /* ---------- 手機掃碼點歌（WebRTC 點對點，不需要自己架伺服器） ---------- */
 const remote = {ok:false,url:''};
@@ -911,8 +931,9 @@ async function onPhoneData(conn,d){
     else if(d.t==='search'){
       const q = String(d.q||'').trim().slice(0,80);
       if(!q) throw new Error('請輸入關鍵字');
-      const items = sortSongs(await searchSongs(q,{light:!!d.light,onMiss:miss}),d.sort==='new'?'new':'views');
-      conn.send({t:'results',rid:d.rid,items:items.map(v=>({id:v.id,title:v.title,channel:v.channel,thumb:v.thumb,rank:v.rank,views:v.views,published:v.published}))});
+      const prof = d.prof==='jp' ? 'jp' : '';
+      const items = sortSongs(await searchSongs(q,{light:!!d.light,onMiss:miss,prof}),d.sort==='new'?'new':'views');
+      conn.send({t:'results',rid:d.rid,items:items.map(v=>({id:v.id,title:v.title,channel:v.channel,thumb:v.thumb,rank:v.rank,prof:v.prof||'',views:v.views,published:v.published}))});
     }
     else if(d.t==='explore'){
       const r = await exploreData(String(d.region||''),String(d.cat||''),miss,d.sort==='new'?'new':'views');
@@ -922,7 +943,7 @@ async function onPhoneData(conn,d){
     else if(d.t==='pick'){
       const q = String(d.q||'').trim().slice(0,100);
       if(!q) throw new Error('缺少歌名');
-      const best = await pickKaraoke(q,singer,miss);
+      const best = await pickKaraoke(q,singer,miss,d.prof==='jp'?'jp':'');
       toast('📱 '+(singer||'手機')+' 點了：'+best.title.slice(0,18));
       conn.send({t:'added',rid:d.rid,title:best.title});
     }

@@ -59,7 +59,7 @@ small{color:#a99bc9}
       <input id="q" type="search" enterkeyhint="search" placeholder="歌名或歌手">
       <button id="go" onclick="search()" style="flex:none">搜尋</button>
     </div>
-    <small>🎤 伴奏MV → 📝 歌詞版 → 其他（只列 10 萬次觀看以上）</small>
+    <small>🎤 伴奏MV → 📝 歌詞版 → 其他（只列 10 萬次觀看以上；從「日本」探索進來的搜尋改為優先ひらがな／ローマ字歌詞、門檻 4,000 次）</small>
     <div style="margin:6px 0"><small>同類排序：</small><select class="sortSel" onchange="setSort(this.value)" style="background:#150f24;color:#fff;border:1px solid #4a3d6e;border-radius:8px;padding:6px"><option value="views">最多觀看</option><option value="new">最新上傳</option></select></div>
     <ul id="res"></ul>
   </div>
@@ -79,13 +79,15 @@ const ICE = {iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:globa
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BADGE = {1:['🎤 伴奏MV','b1'],2:['📝 歌詞版','b2'],3:['其他','b3']};
+const BADGE_JP = {1:['🎤 伴奏＋ひらがな/ローマ字','b1'],2:['🔤 ひらがな/ローマ字歌詞','b2'],3:['🎤 伴奏MV','b1'],4:['📝 歌詞版','b2'],5:['其他','b3']};
+const bdOf = v => (v.prof==='jp'?BADGE_JP:BADGE)[v.rank] || BADGE[3];
 let sortMode = localStorage.getItem('rsort') === 'new' ? 'new' : 'views', lastSearch = null;
 const fmtViews = n => n>=1e8 ? (n/1e8).toFixed(1)+'億' : n>=1e4 ? Math.round(n/1e4)+'萬' : String(n||0);
 const metaOf = v => v.views ? ' · 👁 '+fmtViews(v.views)+' 次 · '+String(v.published||'').slice(0,10) : '';
 function setSort(v){
   sortMode = v==='new' ? 'new' : 'views'; localStorage.setItem('rsort',sortMode);
   document.querySelectorAll('.sortSel').forEach(x=>x.value = sortMode);
-  if(lastSearch){ $('q').value = lastSearch.q; search(lastSearch.light); }
+  if(lastSearch){ $('q').value = lastSearch.q; search(lastSearch.light,lastSearch.prof); }
   if(typeof exLoad==='function' && exDone) exLoad();
 }
 let peer = null, conn = null, connected = false, retry = null, rid = 0, R = [];
@@ -157,16 +159,17 @@ function renderState(s){
 }
 
 /* ---------- 搜尋與點歌 ---------- */
-async function search(light){
+async function search(light,profArg){
   const q = $('q').value.trim(); if(!q) return;
-  lastSearch = {q,light:!!light};
+  const prof = profArg!==undefined ? profArg : ((light && exReg==='jp') ? 'jp' : '');
+  lastSearch = {q,light:!!light,prof};
   $('go').disabled = true; $('res').innerHTML = '<li><small>搜尋中…</small></li>';
   try{
-    const d = await ask({t:'search',q,light:!!light,sort:sortMode});
+    const d = await ask({t:'search',q,light:!!light,sort:sortMode,prof});
     R = d.items || [];
     $('res').innerHTML = R.length ? R.map((v,i)=>`<li class="res">
       <img src="${esc(v.thumb)}" alt="">
-      <div class="t"><span class="badge ${BADGE[v.rank][1]}">${BADGE[v.rank][0]}</span>${esc(v.title)}<br><small>${esc(v.channel)}${metaOf(v)}</small></div>
+      <div class="t"><span class="badge ${bdOf(v)[1]}">${bdOf(v)[0]}</span>${esc(v.title)}<br><small>${esc(v.channel)}${metaOf(v)}</small></div>
       <button id="b${i}" onclick="add(${i})">點歌</button></li>`).join('') : '<li><small>找不到結果</small></li>';
     err('');
   }catch(e){ $('res').innerHTML = ''; err(e.message); }
@@ -228,7 +231,7 @@ async function exPick(i){
   if(!name){ toast('請先輸入你的名字'); $('name').focus(); return; }
   const v = EX[i], b = $('p'+i); b.disabled = true; b.textContent = '找伴奏…';
   try{
-    const d = await ask({t:'pick',q:v.q,singer:name},40000);
+    const d = await ask({t:'pick',q:v.q,singer:name,prof:(exReg==='jp'?'jp':'')},40000);
     b.textContent = '已點 ✓'; toast('已加入：' + (d.title||'').slice(0,20)); err('');
   }catch(e){ err(e.message); b.textContent = '點歌'; }
   setTimeout(()=>{ b.disabled = false; b.textContent = '點歌'; },4000);
