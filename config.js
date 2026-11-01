@@ -8,8 +8,7 @@ window.KARAOKE_CONFIG = {
   // 搜尋結果最低觀看次數
   minViews: 100000,
 
-  // 免費試用天數。試用結束後，每次開啟程式都會先出現「等待畫面」，升級後就不會再出現
-  trialDays: 7,
+  // 免費版：每次開啟程式都會先出現「等待畫面」（秒數如下），升級後就不會再出現
   gateSeconds: 10,
 
   // 升級價格的顯示文字，以及網頁版購買連結（例如 Stripe Payment Link / Lemon Squeezy / Ko-fi 商品頁）

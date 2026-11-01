@@ -1,9 +1,7 @@
 /* 方案與升級碼
-   - 試用：首次使用起 trialDays 天，完全沒有限制
-   - 免費版（試用結束、尚未升級）：每次開啟程式，先出現 gateSeconds 秒的「等待畫面」，倒數完才能使用
+   - 免費版：每次開啟程式，先出現 gateSeconds 秒的「等待畫面」，倒數完自動進入
    - 升級：輸入升級碼（產生後 24 小時內有效、只能用一次）→ 這台裝置永久不再出現等待畫面
-   - 限制：試用天數與「已升級」記在本機；清除瀏覽器資料後試用會重算、升級狀態會消失
-     （已升級者可聯絡開發者，用「裝置代碼」找回，見 readme） */
+   - 限制：「已升級」狀態記在本機；清除瀏覽器資料後會消失（已升級者可聯絡開發者，用「裝置代碼」找回，見 readme） */
 (function () {
   const C = window.KARAOKE_CONFIG || {}, DAY = 864e5;
   const PROXY = (C.apiBase || '').replace(/\/+$/, '');
@@ -13,10 +11,6 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   const $ = id => document.getElementById(id);
-  // 時鐘只會往前：避免把系統日期調回去來延長試用
-  const clock = () => { const t = Date.now(), last = +ls.get('klast') || 0, n = Math.max(t, last); ls.set('klast', String(n)); return n; };
-  let start = +ls.get('ktrial') || 0;
-  if (!start) { start = clock(); ls.set('ktrial', String(start)); }
 
   function devId() {
     let d = ls.get('kdev');
@@ -27,11 +21,6 @@
     return d;
   }
   const isPaid = () => ls.get('kpaid') === '1';
-  function status() {
-    if (isPaid()) return { plan: 'premium' };
-    const left = Math.ceil((start + (C.trialDays || 7) * DAY - clock()) / DAY);
-    return left > 0 ? { plan: 'trial', daysLeft: left } : { plan: 'free' };
-  }
   async function api(path, params) {
     if (!PROXY) throw new Error('此版本沒有設定升級碼伺服器（config.js 的 apiBase）');
     const r = await fetch(PROXY + path + '?' + new URLSearchParams(params));
@@ -40,7 +29,7 @@
     return j;
   }
 
-  // ---------- 開啟時的等待畫面（只在免費版出現，每次開啟程式一次） ----------
+  // ---------- 開啟時的等待畫面（免費版，每次開啟程式一次） ----------
   let gateTimer = null;
   function hideGate() {
     clearInterval(gateTimer); gateTimer = null;
@@ -60,16 +49,12 @@
   }
 
   function renderPlan() {
-    const s = status(), btn = $('planBtn');
-    if (btn) btn.textContent = s.plan === 'premium' ? '👑 已升級' : s.plan === 'trial' ? '🎁 免費試用剩 ' + s.daysLeft + ' 天' : '👑 升級（跳過等待）';
-    if (s.plan === 'premium' && window.planGateActive) hideGate();
+    const btn = $('planBtn');
+    if (btn) btn.textContent = isPaid() ? '👑 已升級' : '👑 升級（跳過等待）';
+    if (isPaid() && window.planGateActive) hideGate();
   }
-  function planText() {
-    const s = status();
-    if (s.plan === 'premium') return '✅ 目前方案：升級版（永久不用等待）';
-    if (s.plan === 'trial') return '🎁 免費試用中：還剩 ' + s.daysLeft + ' 天。試用結束後，每次開啟程式需先等待 ' + GATE + ' 秒；升級後永久不用等待。';
-    return '目前方案：免費版（每次開啟程式需先等待 ' + GATE + ' 秒）。升級後永久不用等待。';
-  }
+  const planText = () => isPaid() ? '✅ 目前方案：升級版（永久不用等待）'
+    : '目前方案：免費版（每次開啟程式需先等待 ' + GATE + ' 秒）。升級後永久不用等待。';
 
   // ---------- 升級視窗 ----------
   window.openPlan = function () {
@@ -94,7 +79,7 @@
     try {
       const j = await api('/redeem', { code, dev: devId() });
       if (!j.ok) { msg.textContent = j.error || '升級碼無效'; return; }
-      ls.set('kpaid', '1'); ls.set('kchk', String(clock()));
+      ls.set('kpaid', '1'); ls.set('kchk', String(Date.now()));
       $('planKey').value = ''; msg.textContent = '✅ 升級成功！這台裝置已永久不用等待，謝謝支持。';
       $('planStatus').textContent = planText(); $('planPrice').textContent = ''; renderPlan();
     } catch (e) { msg.textContent = e.message; }
@@ -103,14 +88,12 @@
   // ---------- 啟動：顯示等待畫面、還原／重新確認升級狀態 ----------
   window.initPlan = function () {
     renderPlan();
-    if (status().plan === 'free') showGate();
+    if (!isPaid()) showGate();
     if (!PROXY) return;
-    const t = clock();
     if (!isPaid()) {                 // 例如開發者用「裝置代碼」手動授權、或曾在此裝置升級過
-      api('/entitlement', { dev: devId() }).then(j => { if (j.paid) { ls.set('kpaid', '1'); ls.set('kchk', String(clock())); renderPlan(); } }).catch(() => {});
-    } else if (t - (+ls.get('kchk') || 0) > 3 * DAY) {   // 已升級：每 3 天確認一次，只有伺服器明確回報「未升級」才取消
-      api('/entitlement', { dev: devId() }).then(j => { ls.set('kchk', String(clock())); if (j.paid === false) { ls.set('kpaid', '0'); renderPlan(); } }).catch(() => {});
+      api('/entitlement', { dev: devId() }).then(j => { if (j.paid) { ls.set('kpaid', '1'); ls.set('kchk', String(Date.now())); renderPlan(); } }).catch(() => {});
+    } else if (Date.now() - (+ls.get('kchk') || 0) > 3 * DAY) {   // 已升級：每 3 天確認一次，只有伺服器明確回報「未升級」才取消
+      api('/entitlement', { dev: devId() }).then(j => { ls.set('kchk', String(Date.now())); if (j.paid === false) { ls.set('kpaid', '0'); renderPlan(); } }).catch(() => {});
     }
-    setInterval(renderPlan, 3600e3);
   };
 })();

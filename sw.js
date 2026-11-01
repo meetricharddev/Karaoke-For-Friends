@@ -1,5 +1,5 @@
 // 簡單的 Service Worker：讓瀏覽器可以把本頁安裝成 App；網路優先，離線時才用快取
-const V = 'karaoke-v3';
+const V = 'karaoke-v4';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));
